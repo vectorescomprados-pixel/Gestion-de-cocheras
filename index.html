@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover">
-    <title>SISTEMA COCHERAS PRO</title>
+    <title>SISTEMA COCHERAS UF</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
@@ -17,19 +17,16 @@
 
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         
-        /* TARJETA EXPANDIBLE */
-        .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; transition: 0.3s; }
+        .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; }
         .card-header { display: flex; align-items: center; padding: 18px; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
         .card-info { flex: 1; margin-left: 10px; }
-        .card-title { font-size: 17px; font-weight: 800; color: var(--blue); }
-        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); padding-right: 5px; }
+        .card-title { font-size: 20px; font-weight: 900; color: var(--blue); } /* Ahora es la UF */
+        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
         
-        /* DETALLE OCULTO */
-        .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; animation: slideDown 0.2s ease-out; }
-        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; }
         .detail-item { margin-top: 10px; font-size: 13px; color: #8696a0; }
-        .detail-item b { color: #fff; display: block; font-size: 14px; }
+        .detail-item b { color: #fff; display: block; font-size: 14px; text-transform: uppercase; }
 
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
         .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
@@ -37,7 +34,7 @@
 </head>
 <body>
 
-<div class="status-bar">● CONTROL DE COCHERAS ACTIVO</div>
+<div class="status-bar">● GESTIÓN POR UNIDAD FUNCIONAL</div>
 
 <div class="panel">
     <div class="row">
@@ -46,21 +43,21 @@
         <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
     </div>
     <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="procesarCSV(event)">
-    <input type="text" id="buscador" placeholder="Buscar Cochera, UF, Nombre o Patente..." oninput="filtrar()">
+    <input type="text" id="buscador" placeholder="Buscar UF, Propietario o Patente..." oninput="filtrar()">
 </div>
 
 <div id="lista-cocheras"></div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
-        <h2 style="color:var(--blue); margin-top:0; font-size: 20px;">ACTUALIZAR REGISTRO</h2>
-        <label style="font-size:12px; color:#8696a0">PROPIETARIO</label>
-        <input type="text" id="f-prop">
-        <label style="font-size:12px; color:#8696a0">PATENTE / PLACA</label>
+        <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR REGISTRO <span id="label-uf-modal"></span></h2>
+        <label style="font-size:11px; color:#8696a0">NRO COCHERA ASIGNADA</label>
+        <input type="text" id="f-id">
+        <label style="font-size:11px; color:#8696a0">PATENTE</label>
         <input type="text" id="f-patente">
-        <label style="font-size:12px; color:#8696a0">VEHÍCULO</label>
+        <label style="font-size:11px; color:#8696a0">VEHÍCULO (MARCA/MODELO)</label>
         <input type="text" id="f-auto">
-        <textarea id="f-obs" placeholder="Observaciones..."></textarea>
+        <textarea id="f-obs" placeholder="Observaciones generales..."></textarea>
         
         <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
             <button class="btn btn-blue" onclick="guardarCambios()">ACTUALIZAR</button>
@@ -86,7 +83,7 @@
     let todasLasCocheras = [];
     let currentId = null;
 
-    onSnapshot(query(colRef, orderBy("id_cochera")), (snap) => {
+    onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
         renderizar(todasLasCocheras);
     });
@@ -96,12 +93,12 @@
         cont.innerHTML = '';
         lista.forEach(c => {
             cont.innerHTML += `
-                <div class="card" id="card-${c.id}">
+                <div class="card">
                     <div class="card-bar"></div>
                     <div class="card-header">
                         <div class="card-info">
-                            <div class="card-title">Cochera ${c.id_cochera}</div>
-                            <div style="font-size:14px">UF: ${c.uf} | ${c.prop || 'Cargar Nombre'}</div>
+                            <div class="card-title">UF ${c.uf}</div>
+                            <div style="font-size:14px; color:#fff">${c.prop || '---'}</div>
                         </div>
                         <div class="card-actions">
                             <i class="far fa-eye" onclick="toggleDetalle('${c.id}')"></i>
@@ -109,6 +106,7 @@
                         </div>
                     </div>
                     <div class="card-detail" id="detail-${c.id}">
+                        <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || 'NO ASIGNADA'}</b></div>
                         <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
                         <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
                         <div class="detail-item">OBSERVACIONES: <b>${c.obs || 'Sin notas'}</b></div>
@@ -117,41 +115,37 @@
         });
     }
 
-    // --- LOGICA DE EXPANSIÓN (OJO) ---
     window.toggleDetalle = (id) => {
-        const detail = document.getElementById(`detail-${id}`);
-        const isVisible = detail.style.display === 'block';
-        detail.style.display = isVisible ? 'none' : 'block';
+        const d = document.getElementById(`detail-${id}`);
+        d.style.display = d.style.display === 'block' ? 'none' : 'block';
     };
 
-    // --- IMPORTADOR CSV (Solo UF y Propietario) ---
+    // --- IMPORTADOR CSV (UF y Propietario) ---
     window.procesarCSV = (event) => {
-        const file = event.target.files;
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const rows = e.target.result.split('\n');
-            for(let row of rows) {
-                const cols = row.split(',');
-                // Supongamos que tu CSV tiene: UF en col 0 y Propietario en col 1
+            const lines = e.target.result.split('\n');
+            for(let line of lines) {
+                const cols = line.split(',');
                 const uf = cols ? cols.trim() : "";
                 const prop = cols ? cols.trim() : "";
-                const nro = cols ? cols.trim() : ""; // Nro de cochera
-
-                if(nro && nro !== "Nro") {
-                    await setDoc(doc(db, "cocheras_edificio", `C-${nro}`), {
-                        uf: uf, prop: prop, id_cochera: nro
+                if(uf && uf !== "UF") {
+                    // Usamos la UF como ID del documento para evitar duplicados
+                    await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), {
+                        uf: uf, prop: prop
                     }, { merge: true });
                 }
             }
-            alert("Base importada (UF y Propietarios listos)");
+            alert("Base cargada: UF y Propietarios sincronizados");
         };
-        reader.readAsText(file);
+        reader.readAsText(event.target.files);
     };
 
     window.abrirEditar = (id) => {
         const c = todasLasCocheras.find(x => x.id === id);
         currentId = id;
-        document.getElementById('f-prop').value = c.prop || "";
+        document.getElementById('label-uf-modal').innerText = `(UF ${c.uf})`;
+        document.getElementById('f-id').value = c.id_cochera || "";
         document.getElementById('f-patente').value = c.patente || "";
         document.getElementById('f-auto').value = c.auto || "";
         document.getElementById('f-obs').value = c.obs || "";
@@ -160,7 +154,7 @@
 
     window.guardarCambios = async () => {
         await setDoc(doc(db, "cocheras_edificio", currentId), {
-            prop: document.getElementById('f-prop').value,
+            id_cochera: document.getElementById('f-id').value,
             patente: document.getElementById('f-patente').value.toUpperCase(),
             auto: document.getElementById('f-auto').value,
             obs: document.getElementById('f-obs').value
@@ -170,13 +164,11 @@
 
     window.filtrar = () => {
         const v = document.getElementById('buscador').value.toLowerCase();
-        const f = todasLasCocheras.filter(c => 
+        renderizar(todasLasCocheras.filter(c => 
             c.uf.toLowerCase().includes(v) || 
-            c.id_cochera.includes(v) || 
-            c.patente.toLowerCase().includes(v) ||
-            (c.prop && c.prop.toLowerCase().includes(v))
-        );
-        renderizar(f);
+            (c.prop && c.prop.toLowerCase().includes(v)) ||
+            (c.patente && c.patente.toLowerCase().includes(v))
+        ));
     };
 
     window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';

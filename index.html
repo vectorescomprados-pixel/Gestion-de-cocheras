@@ -17,17 +17,22 @@
 
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         
-        .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); display: flex; align-items: center; padding: 18px; position: relative; overflow: hidden; }
+        /* TARJETA EXPANDIBLE */
+        .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; transition: 0.3s; }
+        .card-header { display: flex; align-items: center; padding: 18px; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
         .card-info { flex: 1; margin-left: 10px; }
         .card-title { font-size: 17px; font-weight: 800; color: var(--blue); }
-        .card-actions { display: flex; gap: 15px; font-size: 18px; color: var(--blue); }
-
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; overflow-y: auto; }
-        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
+        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); padding-right: 5px; }
         
-        #preview-cam { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 2px solid var(--red); }
-        #camera-feed { width: 100%; border-radius: 10px; transform: scaleX(-1); }
+        /* DETALLE OCULTO */
+        .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; animation: slideDown 0.2s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .detail-item { margin-top: 10px; font-size: 13px; color: #8696a0; }
+        .detail-item b { color: #fff; display: block; font-size: 14px; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
+        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
     </style>
 </head>
 <body>
@@ -41,43 +46,25 @@
         <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
     </div>
     <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="procesarCSV(event)">
-    <input type="text" id="buscador" placeholder="Buscar UF, Cochera o Patente..." oninput="filtrar()">
+    <input type="text" id="buscador" placeholder="Buscar Cochera, UF, Nombre o Patente..." oninput="filtrar()">
 </div>
 
 <div id="lista-cocheras"></div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
-        <h2 id="modal-titulo" style="color:var(--blue); margin-top:0">DETALLES REGISTRO</h2>
-        <div id="form-body">
-            <label style="font-size:12px; color:var(--text-sec)">UNIDAD FUNCIONAL</label>
-            <input type="text" id="f-uf">
-            <label style="font-size:12px; color:var(--text-sec)">NRO COCHERA</label>
-            <input type="text" id="f-id" readonly style="background:#0b141a; border-left-color:var(--grey)">
-            <label style="font-size:12px; color:var(--text-sec)">PATENTE / PLACA</label>
-            <input type="text" id="f-patente">
-            <label style="font-size:12px; color:var(--text-sec)">VEHÍCULO</label>
-            <input type="text" id="f-auto">
-            <textarea id="f-obs" placeholder="Observaciones..."></textarea>
-        </div>
-        <div class="row" id="footer-editar" style="grid-template-columns: 1fr 1fr;">
+        <h2 style="color:var(--blue); margin-top:0; font-size: 20px;">ACTUALIZAR REGISTRO</h2>
+        <label style="font-size:12px; color:#8696a0">PROPIETARIO</label>
+        <input type="text" id="f-prop">
+        <label style="font-size:12px; color:#8696a0">PATENTE / PLACA</label>
+        <input type="text" id="f-patente">
+        <label style="font-size:12px; color:#8696a0">VEHÍCULO</label>
+        <input type="text" id="f-auto">
+        <textarea id="f-obs" placeholder="Observaciones..."></textarea>
+        
+        <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
             <button class="btn btn-blue" onclick="guardarCambios()">ACTUALIZAR</button>
-            <button class="btn btn-grey" onclick="cerrarModal()">VOLVER</button>
-        </div>
-    </div>
-</div>
-
-<div id="modal-infraccion" class="modal">
-    <div class="modal-content">
-        <h2 style="color:var(--red); margin-top:0">REPORTAR INFRACCIÓN</h2>
-        <video id="camera-feed" autoplay playsinline></video>
-        <canvas id="canvas-photo" style="display:none"></canvas>
-        <img id="preview-cam">
-        <textarea id="inf-obs" placeholder="Describa la infracción..."></textarea>
-        <div class="row" style="grid-template-columns: 1fr 1fr;">
-            <button class="btn btn-red" id="btn-foto" onclick="tomarFoto()">CAPTURAR</button>
-            <button class="btn btn-blue" id="btn-enviar-inf" style="display:none" onclick="enviarInfraccion()">ENVIAR WA</button>
-            <button class="btn btn-grey" onclick="cerrarInfraccion()">CANCELAR</button>
+            <button class="btn btn-grey" onclick="cerrarModal()">CANCELAR</button>
         </div>
     </div>
 </div>
@@ -94,7 +81,6 @@
 
     const app = initializeApp(config);
     const db = getFirestore(app);
-    const MASTER_KEY = "1131552679";
     const colRef = collection(db, "cocheras_edificio");
 
     let todasLasCocheras = [];
@@ -110,59 +96,71 @@
         cont.innerHTML = '';
         lista.forEach(c => {
             cont.innerHTML += `
-                <div class="card">
+                <div class="card" id="card-${c.id}">
                     <div class="card-bar"></div>
-                    <div class="card-info">
-                        <div class="card-title">Cochera ${c.id_cochera}</div>
-                        <div style="font-size:14px">UF: ${c.uf} | ${c.patente || '---'}</div>
+                    <div class="card-header">
+                        <div class="card-info">
+                            <div class="card-title">Cochera ${c.id_cochera}</div>
+                            <div style="font-size:14px">UF: ${c.uf} | ${c.prop || 'Cargar Nombre'}</div>
+                        </div>
+                        <div class="card-actions">
+                            <i class="far fa-eye" onclick="toggleDetalle('${c.id}')"></i>
+                            <i class="far fa-edit" onclick="abrirEditar('${c.id}')"></i>
+                        </div>
                     </div>
-                    <div class="card-actions">
-                        <i class="far fa-eye" onclick="abrirVer('${c.id}', false)"></i>
-                        <i class="far fa-edit" onclick="abrirVer('${c.id}', true)"></i>
+                    <div class="card-detail" id="detail-${c.id}">
+                        <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
+                        <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
+                        <div class="detail-item">OBSERVACIONES: <b>${c.obs || 'Sin notas'}</b></div>
                     </div>
                 </div>`;
         });
     }
 
-    // --- IMPORTADOR CSV ---
+    // --- LOGICA DE EXPANSIÓN (OJO) ---
+    window.toggleDetalle = (id) => {
+        const detail = document.getElementById(`detail-${id}`);
+        const isVisible = detail.style.display === 'block';
+        detail.style.display = isVisible ? 'none' : 'block';
+    };
+
+    // --- IMPORTADOR CSV (Solo UF y Propietario) ---
     window.procesarCSV = (event) => {
         const file = event.target.files;
         const reader = new FileReader();
         reader.onload = async (e) => {
             const rows = e.target.result.split('\n');
             for(let row of rows) {
-                const [uf, nro, pat, auto] = row.split(','); // Formato esperado: UF,Nro,Patente,Auto
+                const cols = row.split(',');
+                // Supongamos que tu CSV tiene: UF en col 0 y Propietario en col 1
+                const uf = cols ? cols.trim() : "";
+                const prop = cols ? cols.trim() : "";
+                const nro = cols ? cols.trim() : ""; // Nro de cochera
+
                 if(nro && nro !== "Nro") {
-                    await setDoc(doc(db, "cocheras_edificio", `C-${nro.trim()}`), {
-                        uf: uf.trim(), id_cochera: nro.trim(), patente: pat ? pat.trim() : "", auto: auto ? auto.trim() : "", obs: ""
+                    await setDoc(doc(db, "cocheras_edificio", `C-${nro}`), {
+                        uf: uf, prop: prop, id_cochera: nro
                     }, { merge: true });
                 }
             }
-            alert("Base importada con éxito");
+            alert("Base importada (UF y Propietarios listos)");
         };
         reader.readAsText(file);
     };
 
-    window.abrirVer = (id, editable) => {
+    window.abrirEditar = (id) => {
         const c = todasLasCocheras.find(x => x.id === id);
         currentId = id;
-        document.getElementById('f-uf').value = c.uf;
-        document.getElementById('f-id').value = c.id_cochera;
-        document.getElementById('f-patente').value = c.patente;
-        document.getElementById('f-auto').value = c.auto;
+        document.getElementById('f-prop').value = c.prop || "";
+        document.getElementById('f-patente').value = c.patente || "";
+        document.getElementById('f-auto').value = c.auto || "";
         document.getElementById('f-obs').value = c.obs || "";
-        
-        // Bloquear campos si es solo ver (ojo)
-        const inputs = document.querySelectorAll('#form-body input, #form-body textarea');
-        inputs.forEach(i => { if(i.id !== 'f-id') i.readOnly = !editable; });
-        document.getElementById('footer-editar').style.display = editable ? 'grid' : 'none';
-        
         document.getElementById('modal-form').style.display = 'flex';
     };
 
     window.guardarCambios = async () => {
         await setDoc(doc(db, "cocheras_edificio", currentId), {
-            uf: document.getElementById('f-uf').value,
+            prop: document.getElementById('f-prop').value,
             patente: document.getElementById('f-patente').value.toUpperCase(),
             auto: document.getElementById('f-auto').value,
             obs: document.getElementById('f-obs').value
@@ -170,47 +168,15 @@
         cerrarModal();
     };
 
-    // --- MÓDULO CÁMARA / INFRACCIÓN ---
-    let stream = null;
-    window.abrirInfraccion = async () => {
-        document.getElementById('modal-infraccion').style.display = 'flex';
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
-        document.getElementById('camera-feed').srcObject = stream;
-    };
-
-    window.tomarFoto = () => {
-        const video = document.getElementById('camera-feed');
-        const canvas = document.getElementById('canvas-photo');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        canvas.getContext('2d').drawImage(video, 0, 0);
-        
-        document.getElementById('preview-cam').src = canvas.toDataURL('image/jpeg');
-        document.getElementById('preview-cam').style.display = 'block';
-        video.style.display = 'none';
-        document.getElementById('btn-foto').style.display = 'none';
-        document.getElementById('btn-enviar-inf').style.display = 'flex';
-    };
-
-    window.enviarInfraccion = () => {
-        const obs = document.getElementById('inf-obs').value;
-        const msg = encodeURIComponent(`*REPORTE DE INFRACCIÓN COCHERA*%0AObs: ${obs}%0A(Imagen adjunta en la cámara)`);
-        window.open(`https://wa.me/549${MASTER_KEY}?text=${msg}`);
-        cerrarInfraccion();
-    };
-
-    window.cerrarInfraccion = () => {
-        if(stream) stream.getTracks().forEach(t => t.stop());
-        document.getElementById('modal-infraccion').style.display = 'none';
-        document.getElementById('camera-feed').style.display = 'block';
-        document.getElementById('preview-cam').style.display = 'none';
-        document.getElementById('btn-foto').style.display = 'flex';
-        document.getElementById('btn-enviar-inf').style.display = 'none';
-    };
-
     window.filtrar = () => {
         const v = document.getElementById('buscador').value.toLowerCase();
-        renderizar(todasLasCocheras.filter(c => c.uf.includes(v) || c.id_cochera.includes(v) || c.patente.toLowerCase().includes(v)));
+        const f = todasLasCocheras.filter(c => 
+            c.uf.toLowerCase().includes(v) || 
+            c.id_cochera.includes(v) || 
+            c.patente.toLowerCase().includes(v) ||
+            (c.prop && c.prop.toLowerCase().includes(v))
+        );
+        renderizar(f);
     };
 
     window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';

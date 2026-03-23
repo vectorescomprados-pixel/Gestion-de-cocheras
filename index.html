@@ -3,312 +3,186 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA DE COCHERAS PRO</title>
-    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icono.png">
+    <link rel="icon" type="image/png" href="icono.png">
+    <title>SISTEMA COCHERAS</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
-        /* Paleta de colores exacta de tus fotos */
-        :root {
-            --bg: #0b141a; /* Negro profundo de fondo */
-            --card: #111b21; /* Gris oscuro de tarjetas y panel */
-            --blue: #2563eb;
-            --red: #e11d48;
-            --yellow: #f59e0b;
-            --grey: #4b5563;
-            --text-main: #e9edef;
-            --text-sec: #8696a0;
-            --border: #222d34;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            background: var(--bg);
-            color: var(--text-main);
-            font-family: 'Segoe UI', sans-serif;
-            overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        /* --- Estructura Principal --- */
-        .app {
-            max-width: 480px; /* Adaptado a móvil */
-            margin: 0 auto;
-            padding: 10px;
-            box-sizing: border-box;
-        }
-
-        /* --- Barra de Estado --- */
-        .status-bar {
-            text-align: center;
-            font-size: 11px;
-            font-weight: bold;
-            color: #22c55e;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 15px;
-        }
-
-        /* --- Panel de Botones (Imagen 1) --- */
-        .panel {
-            background: var(--card);
-            padding: 15px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
-            margin-bottom: 15px;
-        }
-
-        .row {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-
-        /* Estilo base de botones exacto */
-        .btn {
-            height: 48px;
-            border-radius: 8px;
-            border: none;
-            font-size: 13px;
-            font-weight: 900;
-            text-transform: uppercase;
-            cursor: pointer;
-            color: #fff;
-            transition: opacity 0.2s;
-        }
-        .btn:active { opacity: 0.7; }
-        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        /* Botones por color */
-        .btn-grey { background: var(--grey); }
-        .btn-blue { background: var(--blue); }
-        .btn-red { background: var(--red); }
+        :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
+        body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; -webkit-tap-highlight-color: transparent; }
+        
+        .status-bar { text-align: center; font-size: 11px; font-weight: bold; color: #22c55e; margin-bottom: 15px; letter-spacing: 1px;}
+        
+        /* Panel Estilo Foto 1 */
+        .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
+        .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        .btn { height: 48px; border-radius: 8px; border: none; font-size: 12px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; transition: 0.2s; }
+        .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); }
         .btn-yellow { background: var(--yellow); color: #000; }
 
-        /* --- Buscador (Imagen 1) --- */
-        .search-container {
-            margin: 15px 0;
-        }
-        input[type="text"] {
-            width: 100%;
-            height: 50px;
-            background: #1a242b;
-            border: 1px solid #333;
-            border-radius: 8px;
-            color: #fff;
-            padding: 0 15px;
-            box-sizing: border-box;
-            font-size: 16px;
-        }
-        input[type="text"]::placeholder {
-            color: #667781;
-        }
+        input { width: 100%; height: 50px; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 0 15px; box-sizing: border-box; margin: 10px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
+        
+        /* Tarjetas de Cocheras */
+        .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); display: flex; align-items: center; padding: 18px; position: relative; overflow: hidden; }
+        .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
+        .card-info { flex: 1; margin-left: 10px; }
+        .card-title { font-size: 18px; font-weight: 800; color: var(--blue); margin-bottom: 3px; }
+        .card-subtitle { font-size: 15px; font-weight: 600; color: #fff; }
+        .card-details { font-size: 13px; color: #8696a0; }
+        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
+        .fa-trash-alt { color: var(--red); }
 
-        /* --- Lista de Cocheras (Imagen 1 y 3) --- */
-        .list {
-            margin-top: 20px;
-        }
-
-        /* Tarjeta de Cochera exacta */
-        .card {
-            background: var(--card);
-            border-radius: 12px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            padding: 18px;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Barra de color lateral (Identificador) */
-        .card-bar {
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 6px;
-            background: var(--yellow); /* Variable por estado */
-        }
-
-        .card-info {
-            flex: 1;
-            margin-left: 10px;
-        }
-
-        /* Texto exacto: ID Cochera */
-        .card-title {
-            font-size: 18px;
-            font-weight: 800;
-            color: var(--blue);
-            margin-bottom: 5px;
-            text-transform: uppercase;
-        }
-
-        /* Texto exacto: Patente/Vehículo */
-        .card-subtitle {
-            font-size: 14px;
-            color: var(--text-main);
-            margin-bottom: 4px;
-        }
-        .card-details {
-            font-size: 13px;
-            color: var(--text-sec);
-        }
-
-        /* Acciones de la tarjeta (Ver, Editar, Borrar) */
-        .card-actions {
-            display: flex;
-            gap: 15px;
-            color: var(--blue);
-            font-size: 18px;
-            margin-left: 15px;
-        }
-        .card-actions i { cursor: pointer; }
-        .card-actions i.fa-trash-alt { color: var(--red); }
-
-        /* --- Modal de Confirmación de Borrado --- */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 100;
-        }
-        .modal-content {
-            background: var(--card);
-            width: 90%;
-            max-width: 320px;
-            padding: 25px;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            text-align: center;
-        }
-        .modal-content h3 {
-            margin: 0 0 15px 0;
-            color: #fff;
-            font-size: 18px;
-        }
-        .modal-content p {
-            color: var(--text-sec);
-            font-size: 14px;
-            margin-bottom: 25px;
-        }
-        .modal-btns {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-        .modal-btn {
-            height: 40px;
-            border-radius: 8px;
-            border: none;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .modal-btn-red {
-            background: var(--red);
-            color: #fff;
-        }
-        .modal-btn-grey {
-            background: var(--grey);
-            color: #fff;
-        }
-
-        /* --- Pantalla de Carga/No Datos --- */
-        .no-data {
-            text-align: center;
-            padding: 50px 0;
-            color: var(--text-sec);
-        }
+        /* Modales Blindados */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(5px); }
+        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 30px; border-radius: 28px; text-align: center; border: 1px solid #32444e; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-<div class="app">
-    
-    <div class="status-bar">● EN LÍNEA - SEGURIDAD ACTIVA</div>
+<div class="status-bar">● SISTEMA DE COCHERAS ACTIVO</div>
 
-    <div class="panel">
-        <div class="row">
-            <button class="btn btn-grey">ESTADO</button>
-            <button class="btn btn-grey">PATENTES</button>
-            <button class="btn btn-red">CERRAR</button>
-        </div>
-        <div class="row">
-            <button class="btn btn-blue">NUEVA VEH.</button>
-            <button class="btn btn-grey">IMPORTAR</button>
-            <button class="btn btn-grey">RESPALDO</button>
-        </div>
-
-        <div class="search-container">
-            <input type="text" placeholder="Buscar por Cochera, UF o Patente...">
-        </div>
-
-        <div class="row">
-            <button class="btn btn-blue">BUSCAR</button>
-            <button class="btn btn-grey">LIMPIAR</button>
-            <button class="btn btn-yellow">CARGANDO...</button>
-        </div>
+<div class="panel">
+    <div class="row">
+        <button class="btn btn-blue" onclick="abrirNueva()">NUEVA VEH.</button>
+        <button class="btn btn-grey" onclick="alert('Próximamente...')">PATENTES</button>
+        <button class="btn btn-red" onclick="window.location.reload()">RECARGAR</button>
     </div>
-
-    <div class="list" id="cocheras-list">
-        <div class="card">
-            <div class="card-bar"></div> <div class="card-info">
-                <div class="card-title">Cochera 01 (S1)</div>
-                <div class="card-subtitle">AF 123 CD | Ford Focus</div>
-                <div class="card-details">Viculada a UF: 0024A</div>
-            </div>
-            <div class="card-actions">
-                <i class="far fa-eye"></i>
-                <i class="far fa-edit"></i>
-                <i class="far fa-trash-alt" onclick="confirmarBorrado('Cochera 01')"></i>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-bar" style="background:#22c55e"></div> <div class="card-info">
-                <div class="card-title">Cochera 02 (S1)</div>
-                <div class="card-subtitle">-- DISPONIBLE --</div>
-                <div class="card-details">--</div>
-            </div>
-            <div class="card-actions">
-                <i class="far fa-eye" style="opacity:0.3"></i>
-                <i class="far fa-edit"></i>
-                <i class="far fa-trash-alt"></i>
-            </div>
-        </div>
+    <input type="text" id="buscador" placeholder="Buscar Cochera, UF o Patente..." oninput="filtrar()">
+    <div class="row" style="grid-template-columns: 1fr 1fr;">
+        <button class="btn btn-blue" onclick="filtrar()">BUSCAR</button>
+        <button class="btn btn-grey" onclick="limpiar()">LIMPIAR</button>
     </div>
-
 </div>
 
-<div class="modal" id="modal-borrar">
+<div id="lista-cocheras">
+    <div style="text-align:center; padding:50px; color:#8696a0;">Cargando base de datos...</div>
+</div>
+
+<div id="modal-form" class="modal">
     <div class="modal-content">
-        <h3>SEGURIDAD REQUERIDA</h3>
-        <p>¿Estás seguro de que quieres eliminar este vehículo de <b id="cochera-a-borrar"></b>?</p>
-        <div class="modal-btns">
-            <button class="modal-btn modal-btn-red">BORRAR</button>
-            <button class="modal-btn modal-btn-grey" onclick="cerrarModal()">CANCELAR</button>
+        <h2 id="modal-titulo" style="margin:0 0 15px 0; color:#fff;">DATOS COCHERA</h2>
+        <input type="text" id="f-id" placeholder="Nro Cochera (Ej: S1-05)">
+        <input type="text" id="f-uf" placeholder="Unidad Funcional (UF)">
+        <input type="text" id="f-patente" placeholder="Patente (Ej: AF123CD)">
+        <input type="text" id="f-auto" placeholder="Vehículo (Marca/Modelo/Color)">
+        
+        <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
+            <button class="btn btn-blue" onclick="guardarCochera()">GUARDAR</button>
+            <button class="btn btn-grey" onclick="cerrarModal()">CANCELAR</button>
         </div>
     </div>
 </div>
 
-<script>
-    // Lógica para imitar la interfaz
-    function confirmarBorrado(nombreCochera) {
-        document.getElementById('cochera-a-borrar').innerText = nombreCochera;
-        document.getElementById('modal-borrar').style.display = 'flex';
+<div id="modal-seguridad" class="modal">
+    <div class="modal-content">
+        <h2 style="margin:0; color:#fff; font-size: 20px; font-weight: 700;">Seguridad Requerida</h2>
+        <p id="seg-desc" style="color:#8696a0; font-size: 14px; margin: 10px 0;"></p>
+        <input type="password" id="admin-pass" placeholder="Clave Administrativa" style="text-align:center;">
+        <div class="row" style="grid-template-columns: 1fr 1fr;">
+            <button class="btn btn-blue" id="btn-autorizar">AUTORIZAR</button>
+            <button class="btn btn-red" onclick="cerrarSeguridad()">VOLVER</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // USAMOS TUS MISMAS CREDENCIALES DEL SUM
+    const config = { 
+        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
+        authDomain: "gestionuf-remoto.firebaseapp.com", 
+        projectId: "gestionuf-remoto", 
+        storageBucket: "gestionuf-remoto.firebasestorage.app", 
+        messagingSenderId: "724452752860", 
+        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
+    };
+
+    const app = initializeApp(config);
+    const db = getFirestore(app);
+    const MASTER_KEY = "1131552679";
+    const colRef = collection(db, "cocheras_edificio");
+
+    let todasLasCocheras = [];
+
+    // Carga en tiempo real
+    onSnapshot(query(colRef, orderBy("id_cochera")), (snapshot) => {
+        todasLasCocheras = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+        renderizar(todasLasCocheras);
+    });
+
+    function renderizar(listaData) {
+        const contenedor = document.getElementById('lista-cocheras');
+        contenedor.innerHTML = listaData.length === 0 ? '<div style="text-align:center; padding:50px; color:#8696a0;">No hay cocheras registradas.</div>' : '';
+        listaData.forEach(c => {
+            contenedor.innerHTML += `
+                <div class="card">
+                    <div class="card-bar"></div>
+                    <div class="card-info">
+                        <div class="card-title">Cochera ${c.id_cochera}</div>
+                        <div class="card-subtitle">${c.patente} | ${c.auto}</div>
+                        <div class="card-details">UF: ${c.uf}</div>
+                    </div>
+                    <div class="card-actions">
+                        <i class="far fa-trash-alt" onclick="window.preBorrar('${c.id}', '${c.id_cochera}')"></i>
+                    </div>
+                </div>
+            `;
+        });
     }
 
-    function cerrarModal() {
-        document.getElementById('modal-borrar').style.display = 'none';
-    }
+    window.filtrar = () => {
+        const val = document.getElementById('buscador').value.toLowerCase();
+        const filtradas = todasLasCocheras.filter(c => 
+            c.id_cochera.toLowerCase().includes(val) || 
+            c.uf.toLowerCase().includes(val) || 
+            c.patente.toLowerCase().includes(val)
+        );
+        renderizar(filtradas);
+    };
+
+    window.limpiar = () => { document.getElementById('buscador').value = ''; renderizar(todasLasCocheras); };
+
+    window.abrirNueva = () => document.getElementById('modal-form').style.display = 'flex';
+    window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';
+
+    window.guardarCochera = async () => {
+        const id = document.getElementById('f-id').value;
+        const uf = document.getElementById('f-uf').value;
+        const pat = document.getElementById('f-patente').value;
+        const auto = document.getElementById('f-auto').value;
+
+        if(!id || !pat) return alert("Completa Nro de Cochera y Patente");
+
+        try {
+            await addDoc(colRef, { id_cochera: id, uf: uf, patente: pat.toUpperCase(), auto: auto });
+            cerrarModal();
+            document.querySelectorAll('#modal-form input').forEach(i => i.value = '');
+        } catch(e) { alert("Error al guardar"); }
+    };
+
+    // Lógica de Borrado Blindada
+    window.preBorrar = (docId, nombre) => {
+        window.targetId = docId;
+        document.getElementById('seg-desc').innerText = `¿Eliminar registro de la Cochera ${nombre}?`;
+        document.getElementById('admin-pass').value = '';
+        document.getElementById('modal-seguridad').style.display = 'flex';
+    };
+
+    window.cerrarSeguridad = () => document.getElementById('modal-seguridad').style.display = 'none';
+
+    document.getElementById('btn-autorizar').onclick = async () => {
+        if(document.getElementById('admin-pass').value === MASTER_KEY) {
+            await deleteDoc(doc(db, "cocheras_edificio", window.targetId));
+            cerrarSeguridad();
+        } else {
+            alert("Clave incorrecta");
+        }
+    };
 </script>
-
 </body>
 </html>

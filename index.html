@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover">
-    <title>SISTEMA COCHERAS UF</title>
+    <title>SISTEMA COCHERAS PRO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
@@ -15,13 +15,17 @@
         .btn { height: 48px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
 
+        /* Barra de Progreso */
+        .progress-container { width: 100%; height: 8px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
+        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.3s; }
+
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         
         .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; }
         .card-header { display: flex; align-items: center; padding: 18px; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
         .card-info { flex: 1; margin-left: 10px; }
-        .card-title { font-size: 20px; font-weight: 900; color: var(--blue); } /* Ahora es la UF */
+        .card-title { font-size: 20px; font-weight: 900; color: var(--blue); }
         .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
         
         .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; }
@@ -34,7 +38,7 @@
 </head>
 <body>
 
-<div class="status-bar">● GESTIÓN POR UNIDAD FUNCIONAL</div>
+<div class="status-bar">● GESTIÓN DE COCHERAS</div>
 
 <div class="panel">
     <div class="row">
@@ -42,6 +46,11 @@
         <button class="btn btn-red" onclick="abrirInfraccion()"><i class="fas fa-camera"></i> INFRACCIÓN</button>
         <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
     </div>
+    
+    <div class="progress-container" id="p-container">
+        <div id="progress-bar"></div>
+    </div>
+
     <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="procesarCSV(event)">
     <input type="text" id="buscador" placeholder="Buscar UF, Propietario o Patente..." oninput="filtrar()">
 </div>
@@ -50,18 +59,14 @@
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
-        <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR REGISTRO <span id="label-uf-modal"></span></h2>
-        <label style="font-size:11px; color:#8696a0">NRO COCHERA ASIGNADA</label>
-        <input type="text" id="f-id">
-        <label style="font-size:11px; color:#8696a0">PATENTE</label>
-        <input type="text" id="f-patente">
-        <label style="font-size:11px; color:#8696a0">VEHÍCULO (MARCA/MODELO)</label>
-        <input type="text" id="f-auto">
-        <textarea id="f-obs" placeholder="Observaciones generales..."></textarea>
-        
+        <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR <span id="label-uf-modal"></span></h2>
+        <input type="text" id="f-id" placeholder="Cochera Asignada">
+        <input type="text" id="f-patente" placeholder="Patente">
+        <input type="text" id="f-auto" placeholder="Vehículo">
+        <textarea id="f-obs" placeholder="Observaciones..."></textarea>
         <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
-            <button class="btn btn-blue" onclick="guardarCambios()">ACTUALIZAR</button>
-            <button class="btn btn-grey" onclick="cerrarModal()">CANCELAR</button>
+            <button class="btn btn-blue" onclick="guardarCambios()">GUARDAR</button>
+            <button class="btn btn-grey" onclick="cerrarModal()">VOLVER</button>
         </div>
     </div>
 </div>
@@ -115,30 +120,62 @@
         });
     }
 
+    // --- IMPORTADOR CSV MEJORADO ---
+    window.procesarCSV = async (event) => {
+        const file = event.target.files;
+        if(!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const content = e.target.result;
+            const lines = content.split(/\r?\n/).filter(line => line.trim() !== ""); // Limpia lineas vacias
+            
+            const total = lines.length - 1; // Restamos cabecera
+            if(total <= 0) return alert("Archivo vacío o sin datos");
+
+            // Mostrar barra
+            const container = document.getElementById('p-container');
+            const bar = document.getElementById('progress-bar');
+            container.style.display = 'block';
+            bar.style.width = '0%';
+            bar.style.background = 'var(--yellow)';
+
+            let procesados = 0;
+
+            for(let i = 0; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                const uf = cols ? cols.trim() : "";
+                const prop = cols ? cols.trim() : "";
+
+                // Saltar cabecera si existe
+                if(uf.toLowerCase() === "uf" || !uf) continue;
+
+                try {
+                    await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), {
+                        uf: uf, 
+                        prop: prop
+                    }, { merge: true });
+                    
+                    procesados++;
+                    let porcentaje = (procesados / total) * 100;
+                    bar.style.width = porcentaje + '%';
+                } catch (err) {
+                    console.error("Error en UF:", uf, err);
+                }
+            }
+
+            bar.style.background = '#22c55e'; // Verde al terminar
+            setTimeout(() => {
+                container.style.display = 'none';
+                alert(`¡Importación exitosa! Se cargaron ${procesados} registros.`);
+            }, 1000);
+        };
+        reader.readAsText(file);
+    };
+
     window.toggleDetalle = (id) => {
         const d = document.getElementById(`detail-${id}`);
         d.style.display = d.style.display === 'block' ? 'none' : 'block';
-    };
-
-    // --- IMPORTADOR CSV (UF y Propietario) ---
-    window.procesarCSV = (event) => {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const lines = e.target.result.split('\n');
-            for(let line of lines) {
-                const cols = line.split(',');
-                const uf = cols ? cols.trim() : "";
-                const prop = cols ? cols.trim() : "";
-                if(uf && uf !== "UF") {
-                    // Usamos la UF como ID del documento para evitar duplicados
-                    await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), {
-                        uf: uf, prop: prop
-                    }, { merge: true });
-                }
-            }
-            alert("Base cargada: UF y Propietarios sincronizados");
-        };
-        reader.readAsText(event.target.files);
     };
 
     window.abrirEditar = (id) => {

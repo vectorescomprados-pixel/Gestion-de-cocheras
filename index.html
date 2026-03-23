@@ -2,94 +2,94 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover">
     <title>SISTEMA COCHERAS PRO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
     <style>
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
-        body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; }
         
         .status-bar { text-align: center; font-size: 11px; font-weight: bold; color: #22c55e; margin-bottom: 15px; letter-spacing: 1px;}
-        
         .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
         .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
-        .btn { height: 48px; border-radius: 8px; border: none; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; }
-        .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); }
-        .btn-yellow { background: var(--yellow); color: #000; }
+        .btn { height: 48px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
 
-        input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px 15px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); font-family: inherit; }
-        textarea { height: 80px; resize: none; }
+        input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         
         .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); display: flex; align-items: center; padding: 18px; position: relative; overflow: hidden; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
         .card-info { flex: 1; margin-left: 10px; }
-        .card-title { font-size: 18px; font-weight: 800; color: var(--blue); }
-        .card-subtitle { font-size: 15px; font-weight: 600; color: #fff; }
-        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
+        .card-title { font-size: 17px; font-weight: 800; color: var(--blue); }
+        .card-actions { display: flex; gap: 15px; font-size: 18px; color: var(--blue); }
 
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(5px); }
-        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 30px; border-radius: 28px; text-align: center; border: 1px solid #32444e; }
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; overflow-y: auto; }
+        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
+        
+        #preview-cam { width: 100%; border-radius: 10px; margin-top: 10px; display: none; border: 2px solid var(--red); }
+        #camera-feed { width: 100%; border-radius: 10px; transform: scaleX(-1); }
     </style>
 </head>
 <body>
 
-<div class="status-bar">● GESTIÓN DE COCHERAS 01-087</div>
+<div class="status-bar">● CONTROL DE COCHERAS ACTIVO</div>
 
 <div class="panel">
     <div class="row">
-        <button class="btn btn-blue" onclick="abrirForm()">REGISTRAR</button>
-        <button class="btn btn-yellow" onclick="importarBase()">SUBIR BASE</button>
-        <button class="btn btn-red" onclick="window.location.reload()">RECARGAR</button>
+        <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()"><i class="fas fa-file-upload"></i> SUBIR BASE</button>
+        <button class="btn btn-red" onclick="abrirInfraccion()"><i class="fas fa-camera"></i> INFRACCIÓN</button>
+        <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
     </div>
+    <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="procesarCSV(event)">
     <input type="text" id="buscador" placeholder="Buscar UF, Cochera o Patente..." oninput="filtrar()">
-    <div class="row" style="grid-template-columns: 1fr 1fr;">
-        <button class="btn btn-blue" onclick="filtrar()">BUSCAR</button>
-        <button class="btn btn-grey" onclick="limpiar()">LIMPIAR</button>
-    </div>
 </div>
 
 <div id="lista-cocheras"></div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
-        <h2 id="modal-titulo" style="margin:0 0 10px 0; color:#fff; font-size: 18px;">DATOS DE REGISTRO</h2>
-        <input type="text" id="f-uf" placeholder="Unidad Funcional (UF)">
-        <input type="text" id="f-id" placeholder="Nro de Cochera (01 al 087)">
-        <input type="text" id="f-patente" placeholder="Patente / Placa">
-        <input type="text" id="f-auto" placeholder="Vehículo (Marca/Modelo)">
-        <textarea id="f-obs" placeholder="Observaciones adicionales..."></textarea>
-        
-        <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
-            <button class="btn btn-blue" onclick="guardarCochera()">GUARDAR</button>
-            <button class="btn btn-grey" onclick="cerrarModal()">CANCELAR</button>
+        <h2 id="modal-titulo" style="color:var(--blue); margin-top:0">DETALLES REGISTRO</h2>
+        <div id="form-body">
+            <label style="font-size:12px; color:var(--text-sec)">UNIDAD FUNCIONAL</label>
+            <input type="text" id="f-uf">
+            <label style="font-size:12px; color:var(--text-sec)">NRO COCHERA</label>
+            <input type="text" id="f-id" readonly style="background:#0b141a; border-left-color:var(--grey)">
+            <label style="font-size:12px; color:var(--text-sec)">PATENTE / PLACA</label>
+            <input type="text" id="f-patente">
+            <label style="font-size:12px; color:var(--text-sec)">VEHÍCULO</label>
+            <input type="text" id="f-auto">
+            <textarea id="f-obs" placeholder="Observaciones..."></textarea>
+        </div>
+        <div class="row" id="footer-editar" style="grid-template-columns: 1fr 1fr;">
+            <button class="btn btn-blue" onclick="guardarCambios()">ACTUALIZAR</button>
+            <button class="btn btn-grey" onclick="cerrarModal()">VOLVER</button>
         </div>
     </div>
 </div>
 
-<div id="modal-seguridad" class="modal">
+<div id="modal-infraccion" class="modal">
     <div class="modal-content">
-        <h2 style="margin:0; color:#fff; font-size: 20px;">Seguridad Requerida</h2>
-        <p id="seg-desc" style="color:#8696a0; font-size: 14px; margin: 10px 0;"></p>
-        <input type="password" id="admin-pass" placeholder="Clave Administrativa" style="text-align:center;">
+        <h2 style="color:var(--red); margin-top:0">REPORTAR INFRACCIÓN</h2>
+        <video id="camera-feed" autoplay playsinline></video>
+        <canvas id="canvas-photo" style="display:none"></canvas>
+        <img id="preview-cam">
+        <textarea id="inf-obs" placeholder="Describa la infracción..."></textarea>
         <div class="row" style="grid-template-columns: 1fr 1fr;">
-            <button class="btn btn-blue" id="btn-autorizar">AUTORIZAR</button>
-            <button class="btn btn-red" onclick="cerrarSeguridad()">VOLVER</button>
+            <button class="btn btn-red" id="btn-foto" onclick="tomarFoto()">CAPTURAR</button>
+            <button class="btn btn-blue" id="btn-enviar-inf" style="display:none" onclick="enviarInfraccion()">ENVIAR WA</button>
+            <button class="btn btn-grey" onclick="cerrarInfraccion()">CANCELAR</button>
         </div>
     </div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
-        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
-        authDomain: "gestionuf-remoto.firebaseapp.com", 
-        projectId: "gestionuf-remoto", 
-        storageBucket: "gestionuf-remoto.firebasestorage.app", 
-        messagingSenderId: "724452752860", 
-        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
+        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", authDomain: "gestionuf-remoto.firebaseapp.com", 
+        projectId: "gestionuf-remoto", storageBucket: "gestionuf-remoto.firebasestorage.app", 
+        messagingSenderId: "724452752860", appId: "1:724452752860:web:4d25585addcdcbd146e319" 
     };
 
     const app = initializeApp(config);
@@ -98,107 +98,122 @@
     const colRef = collection(db, "cocheras_edificio");
 
     let todasLasCocheras = [];
-    let editId = null;
+    let currentId = null;
 
-    onSnapshot(query(colRef, orderBy("id_cochera")), (snapshot) => {
-        todasLasCocheras = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
+    onSnapshot(query(colRef, orderBy("id_cochera")), (snap) => {
+        todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
         renderizar(todasLasCocheras);
     });
 
-    function renderizar(listaData) {
-        const contenedor = document.getElementById('lista-cocheras');
-        contenedor.innerHTML = '';
-        listaData.forEach(c => {
-            contenedor.innerHTML += `
+    function renderizar(lista) {
+        const cont = document.getElementById('lista-cocheras');
+        cont.innerHTML = '';
+        lista.forEach(c => {
+            cont.innerHTML += `
                 <div class="card">
                     <div class="card-bar"></div>
-                    <div class="card-info" onclick="abrirEditar('${c.id}')">
+                    <div class="card-info">
                         <div class="card-title">Cochera ${c.id_cochera}</div>
-                        <div class="card-subtitle">UF: ${c.uf} | ${c.patente || 'SIN DATOS'}</div>
-                        <div style="font-size:12px; color:#8696a0">${c.auto || ''} ${c.obs ? ' - ' + c.obs : ''}</div>
+                        <div style="font-size:14px">UF: ${c.uf} | ${c.patente || '---'}</div>
                     </div>
                     <div class="card-actions">
-                        <i class="far fa-trash-alt" onclick="preBorrar('${c.id}', '${c.id_cochera}')"></i>
+                        <i class="far fa-eye" onclick="abrirVer('${c.id}', false)"></i>
+                        <i class="far fa-edit" onclick="abrirVer('${c.id}', true)"></i>
                     </div>
-                </div>
-            `;
+                </div>`;
         });
     }
 
-    // --- IMPORTADOR MASIVO (01 a 087) ---
-    window.importarBase = async () => {
-        if(!confirm("¿Deseas generar la base inicial de cocheras 01 a 087?")) return;
-        const pass = prompt("Clave de administrador:");
-        if(pass !== MASTER_KEY) return alert("Clave incorrecta");
-
-        for(let i=1; i<=87; i++) {
-            let num = i.toString().padStart(2, '0');
-            // Usamos setDoc con ID fijo para no duplicar si se pulsa varias veces
-            await setDoc(doc(db, "cocheras_edificio", `C-${num}`), {
-                id_cochera: num,
-                uf: "Pendiente",
-                patente: "",
-                auto: "",
-                obs: ""
-            }, { merge: true });
-        }
-        alert("Base de cocheras 01-087 generada correctamente.");
+    // --- IMPORTADOR CSV ---
+    window.procesarCSV = (event) => {
+        const file = event.target.files;
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            const rows = e.target.result.split('\n');
+            for(let row of rows) {
+                const [uf, nro, pat, auto] = row.split(','); // Formato esperado: UF,Nro,Patente,Auto
+                if(nro && nro !== "Nro") {
+                    await setDoc(doc(db, "cocheras_edificio", `C-${nro.trim()}`), {
+                        uf: uf.trim(), id_cochera: nro.trim(), patente: pat ? pat.trim() : "", auto: auto ? auto.trim() : "", obs: ""
+                    }, { merge: true });
+                }
+            }
+            alert("Base importada con éxito");
+        };
+        reader.readAsText(file);
     };
 
-    window.abrirForm = () => { editId = null; document.getElementById('modal-form').style.display = 'flex'; };
-    window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';
-
-    window.abrirEditar = (id) => {
+    window.abrirVer = (id, editable) => {
         const c = todasLasCocheras.find(x => x.id === id);
-        if(!c) return;
-        editId = id;
+        currentId = id;
         document.getElementById('f-uf').value = c.uf;
         document.getElementById('f-id').value = c.id_cochera;
         document.getElementById('f-patente').value = c.patente;
         document.getElementById('f-auto').value = c.auto;
         document.getElementById('f-obs').value = c.obs || "";
+        
+        // Bloquear campos si es solo ver (ojo)
+        const inputs = document.querySelectorAll('#form-body input, #form-body textarea');
+        inputs.forEach(i => { if(i.id !== 'f-id') i.readOnly = !editable; });
+        document.getElementById('footer-editar').style.display = editable ? 'grid' : 'none';
+        
         document.getElementById('modal-form').style.display = 'flex';
     };
 
-    window.guardarCochera = async () => {
-        const data = {
+    window.guardarCambios = async () => {
+        await setDoc(doc(db, "cocheras_edificio", currentId), {
             uf: document.getElementById('f-uf').value,
-            id_cochera: document.getElementById('f-id').value,
             patente: document.getElementById('f-patente').value.toUpperCase(),
             auto: document.getElementById('f-auto').value,
             obs: document.getElementById('f-obs').value
-        };
-
-        if(editId) {
-            await setDoc(doc(db, "cocheras_edificio", editId), data, { merge: true });
-        } else {
-            await addDoc(colRef, data);
-        }
+        }, { merge: true });
         cerrarModal();
-        document.querySelectorAll('input, textarea').forEach(i => i.value = '');
+    };
+
+    // --- MÓDULO CÁMARA / INFRACCIÓN ---
+    let stream = null;
+    window.abrirInfraccion = async () => {
+        document.getElementById('modal-infraccion').style.display = 'flex';
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        document.getElementById('camera-feed').srcObject = stream;
+    };
+
+    window.tomarFoto = () => {
+        const video = document.getElementById('camera-feed');
+        const canvas = document.getElementById('canvas-photo');
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext('2d').drawImage(video, 0, 0);
+        
+        document.getElementById('preview-cam').src = canvas.toDataURL('image/jpeg');
+        document.getElementById('preview-cam').style.display = 'block';
+        video.style.display = 'none';
+        document.getElementById('btn-foto').style.display = 'none';
+        document.getElementById('btn-enviar-inf').style.display = 'flex';
+    };
+
+    window.enviarInfraccion = () => {
+        const obs = document.getElementById('inf-obs').value;
+        const msg = encodeURIComponent(`*REPORTE DE INFRACCIÓN COCHERA*%0AObs: ${obs}%0A(Imagen adjunta en la cámara)`);
+        window.open(`https://wa.me/549${MASTER_KEY}?text=${msg}`);
+        cerrarInfraccion();
+    };
+
+    window.cerrarInfraccion = () => {
+        if(stream) stream.getTracks().forEach(t => t.stop());
+        document.getElementById('modal-infraccion').style.display = 'none';
+        document.getElementById('camera-feed').style.display = 'block';
+        document.getElementById('preview-cam').style.display = 'none';
+        document.getElementById('btn-foto').style.display = 'flex';
+        document.getElementById('btn-enviar-inf').style.display = 'none';
     };
 
     window.filtrar = () => {
-        const val = document.getElementById('buscador').value.toLowerCase();
-        renderizar(todasLasCocheras.filter(c => c.uf.toLowerCase().includes(val) || c.id_cochera.includes(val) || c.patente.toLowerCase().includes(val)));
+        const v = document.getElementById('buscador').value.toLowerCase();
+        renderizar(todasLasCocheras.filter(c => c.uf.includes(v) || c.id_cochera.includes(v) || c.patente.toLowerCase().includes(v)));
     };
 
-    window.limpiar = () => { document.getElementById('buscador').value = ''; renderizar(todasLasCocheras); };
-
-    window.preBorrar = (id, nombre) => {
-        window.targetId = id;
-        document.getElementById('seg-desc').innerText = `¿Eliminar datos de la Cochera ${nombre}?`;
-        document.getElementById('modal-seguridad').style.display = 'flex';
-    };
-
-    window.cerrarSeguridad = () => document.getElementById('modal-seguridad').style.display = 'none';
-
-    document.getElementById('btn-autorizar').onclick = async () => {
-        if(document.getElementById('admin-pass').value === MASTER_KEY) {
-            await deleteDoc(doc(db, "cocheras_edificio", window.targetId));
-            cerrarSeguridad();
-        } else { alert("Clave incorrecta"); }
-    };
+    window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';
 </script>
 </body>
 </html>

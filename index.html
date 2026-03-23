@@ -3,11 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="icono.png">
-    <link rel="icon" type="image/png" href="icono.png">
-    <title>SISTEMA COCHERAS</title>
+    <title>SISTEMA COCHERAS PRO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     
     <style>
@@ -16,58 +12,53 @@
         
         .status-bar { text-align: center; font-size: 11px; font-weight: bold; color: #22c55e; margin-bottom: 15px; letter-spacing: 1px;}
         
-        /* Panel Estilo Foto 1 */
         .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
         .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
-        .btn { height: 48px; border-radius: 8px; border: none; font-size: 12px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; transition: 0.2s; }
+        .btn { height: 48px; border-radius: 8px; border: none; font-size: 11px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); }
         .btn-yellow { background: var(--yellow); color: #000; }
 
-        input { width: 100%; height: 50px; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 0 15px; box-sizing: border-box; margin: 10px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
+        input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px 15px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); font-family: inherit; }
+        textarea { height: 80px; resize: none; }
         
-        /* Tarjetas de Cocheras */
         .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); display: flex; align-items: center; padding: 18px; position: relative; overflow: hidden; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
         .card-info { flex: 1; margin-left: 10px; }
-        .card-title { font-size: 18px; font-weight: 800; color: var(--blue); margin-bottom: 3px; }
+        .card-title { font-size: 18px; font-weight: 800; color: var(--blue); }
         .card-subtitle { font-size: 15px; font-weight: 600; color: #fff; }
-        .card-details { font-size: 13px; color: #8696a0; }
         .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
-        .fa-trash-alt { color: var(--red); }
 
-        /* Modales Blindados */
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(5px); }
-        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 30px; border-radius: 28px; text-align: center; border: 1px solid #32444e; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 30px; border-radius: 28px; text-align: center; border: 1px solid #32444e; }
     </style>
 </head>
 <body>
 
-<div class="status-bar">● SISTEMA DE COCHERAS ACTIVO</div>
+<div class="status-bar">● GESTIÓN DE COCHERAS 01-087</div>
 
 <div class="panel">
     <div class="row">
-        <button class="btn btn-blue" onclick="abrirNueva()">NUEVA VEH.</button>
-        <button class="btn btn-grey" onclick="alert('Próximamente...')">PATENTES</button>
+        <button class="btn btn-blue" onclick="abrirForm()">REGISTRAR</button>
+        <button class="btn btn-yellow" onclick="importarBase()">SUBIR BASE</button>
         <button class="btn btn-red" onclick="window.location.reload()">RECARGAR</button>
     </div>
-    <input type="text" id="buscador" placeholder="Buscar Cochera, UF o Patente..." oninput="filtrar()">
+    <input type="text" id="buscador" placeholder="Buscar UF, Cochera o Patente..." oninput="filtrar()">
     <div class="row" style="grid-template-columns: 1fr 1fr;">
         <button class="btn btn-blue" onclick="filtrar()">BUSCAR</button>
         <button class="btn btn-grey" onclick="limpiar()">LIMPIAR</button>
     </div>
 </div>
 
-<div id="lista-cocheras">
-    <div style="text-align:center; padding:50px; color:#8696a0;">Cargando base de datos...</div>
-</div>
+<div id="lista-cocheras"></div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
-        <h2 id="modal-titulo" style="margin:0 0 15px 0; color:#fff;">DATOS COCHERA</h2>
-        <input type="text" id="f-id" placeholder="Nro Cochera (Ej: S1-05)">
+        <h2 id="modal-titulo" style="margin:0 0 10px 0; color:#fff; font-size: 18px;">DATOS DE REGISTRO</h2>
         <input type="text" id="f-uf" placeholder="Unidad Funcional (UF)">
-        <input type="text" id="f-patente" placeholder="Patente (Ej: AF123CD)">
-        <input type="text" id="f-auto" placeholder="Vehículo (Marca/Modelo/Color)">
+        <input type="text" id="f-id" placeholder="Nro de Cochera (01 al 087)">
+        <input type="text" id="f-patente" placeholder="Patente / Placa">
+        <input type="text" id="f-auto" placeholder="Vehículo (Marca/Modelo)">
+        <textarea id="f-obs" placeholder="Observaciones adicionales..."></textarea>
         
         <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
             <button class="btn btn-blue" onclick="guardarCochera()">GUARDAR</button>
@@ -78,7 +69,7 @@
 
 <div id="modal-seguridad" class="modal">
     <div class="modal-content">
-        <h2 style="margin:0; color:#fff; font-size: 20px; font-weight: 700;">Seguridad Requerida</h2>
+        <h2 style="margin:0; color:#fff; font-size: 20px;">Seguridad Requerida</h2>
         <p id="seg-desc" style="color:#8696a0; font-size: 14px; margin: 10px 0;"></p>
         <input type="password" id="admin-pass" placeholder="Clave Administrativa" style="text-align:center;">
         <div class="row" style="grid-template-columns: 1fr 1fr;">
@@ -90,9 +81,8 @@
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, deleteDoc, doc, setDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // USAMOS TUS MISMAS CREDENCIALES DEL SUM
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
         authDomain: "gestionuf-remoto.firebaseapp.com", 
@@ -108,8 +98,8 @@
     const colRef = collection(db, "cocheras_edificio");
 
     let todasLasCocheras = [];
+    let editId = null;
 
-    // Carga en tiempo real
     onSnapshot(query(colRef, orderBy("id_cochera")), (snapshot) => {
         todasLasCocheras = snapshot.docs.map(d => ({id: d.id, ...d.data()}));
         renderizar(todasLasCocheras);
@@ -117,59 +107,87 @@
 
     function renderizar(listaData) {
         const contenedor = document.getElementById('lista-cocheras');
-        contenedor.innerHTML = listaData.length === 0 ? '<div style="text-align:center; padding:50px; color:#8696a0;">No hay cocheras registradas.</div>' : '';
+        contenedor.innerHTML = '';
         listaData.forEach(c => {
             contenedor.innerHTML += `
                 <div class="card">
                     <div class="card-bar"></div>
-                    <div class="card-info">
+                    <div class="card-info" onclick="abrirEditar('${c.id}')">
                         <div class="card-title">Cochera ${c.id_cochera}</div>
-                        <div class="card-subtitle">${c.patente} | ${c.auto}</div>
-                        <div class="card-details">UF: ${c.uf}</div>
+                        <div class="card-subtitle">UF: ${c.uf} | ${c.patente || 'SIN DATOS'}</div>
+                        <div style="font-size:12px; color:#8696a0">${c.auto || ''} ${c.obs ? ' - ' + c.obs : ''}</div>
                     </div>
                     <div class="card-actions">
-                        <i class="far fa-trash-alt" onclick="window.preBorrar('${c.id}', '${c.id_cochera}')"></i>
+                        <i class="far fa-trash-alt" onclick="preBorrar('${c.id}', '${c.id_cochera}')"></i>
                     </div>
                 </div>
             `;
         });
     }
 
+    // --- IMPORTADOR MASIVO (01 a 087) ---
+    window.importarBase = async () => {
+        if(!confirm("¿Deseas generar la base inicial de cocheras 01 a 087?")) return;
+        const pass = prompt("Clave de administrador:");
+        if(pass !== MASTER_KEY) return alert("Clave incorrecta");
+
+        for(let i=1; i<=87; i++) {
+            let num = i.toString().padStart(2, '0');
+            // Usamos setDoc con ID fijo para no duplicar si se pulsa varias veces
+            await setDoc(doc(db, "cocheras_edificio", `C-${num}`), {
+                id_cochera: num,
+                uf: "Pendiente",
+                patente: "",
+                auto: "",
+                obs: ""
+            }, { merge: true });
+        }
+        alert("Base de cocheras 01-087 generada correctamente.");
+    };
+
+    window.abrirForm = () => { editId = null; document.getElementById('modal-form').style.display = 'flex'; };
+    window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';
+
+    window.abrirEditar = (id) => {
+        const c = todasLasCocheras.find(x => x.id === id);
+        if(!c) return;
+        editId = id;
+        document.getElementById('f-uf').value = c.uf;
+        document.getElementById('f-id').value = c.id_cochera;
+        document.getElementById('f-patente').value = c.patente;
+        document.getElementById('f-auto').value = c.auto;
+        document.getElementById('f-obs').value = c.obs || "";
+        document.getElementById('modal-form').style.display = 'flex';
+    };
+
+    window.guardarCochera = async () => {
+        const data = {
+            uf: document.getElementById('f-uf').value,
+            id_cochera: document.getElementById('f-id').value,
+            patente: document.getElementById('f-patente').value.toUpperCase(),
+            auto: document.getElementById('f-auto').value,
+            obs: document.getElementById('f-obs').value
+        };
+
+        if(editId) {
+            await setDoc(doc(db, "cocheras_edificio", editId), data, { merge: true });
+        } else {
+            await addDoc(colRef, data);
+        }
+        cerrarModal();
+        document.querySelectorAll('input, textarea').forEach(i => i.value = '');
+    };
+
     window.filtrar = () => {
         const val = document.getElementById('buscador').value.toLowerCase();
-        const filtradas = todasLasCocheras.filter(c => 
-            c.id_cochera.toLowerCase().includes(val) || 
-            c.uf.toLowerCase().includes(val) || 
-            c.patente.toLowerCase().includes(val)
-        );
-        renderizar(filtradas);
+        renderizar(todasLasCocheras.filter(c => c.uf.toLowerCase().includes(val) || c.id_cochera.includes(val) || c.patente.toLowerCase().includes(val)));
     };
 
     window.limpiar = () => { document.getElementById('buscador').value = ''; renderizar(todasLasCocheras); };
 
-    window.abrirNueva = () => document.getElementById('modal-form').style.display = 'flex';
-    window.cerrarModal = () => document.getElementById('modal-form').style.display = 'none';
-
-    window.guardarCochera = async () => {
-        const id = document.getElementById('f-id').value;
-        const uf = document.getElementById('f-uf').value;
-        const pat = document.getElementById('f-patente').value;
-        const auto = document.getElementById('f-auto').value;
-
-        if(!id || !pat) return alert("Completa Nro de Cochera y Patente");
-
-        try {
-            await addDoc(colRef, { id_cochera: id, uf: uf, patente: pat.toUpperCase(), auto: auto });
-            cerrarModal();
-            document.querySelectorAll('#modal-form input').forEach(i => i.value = '');
-        } catch(e) { alert("Error al guardar"); }
-    };
-
-    // Lógica de Borrado Blindada
-    window.preBorrar = (docId, nombre) => {
-        window.targetId = docId;
-        document.getElementById('seg-desc').innerText = `¿Eliminar registro de la Cochera ${nombre}?`;
-        document.getElementById('admin-pass').value = '';
+    window.preBorrar = (id, nombre) => {
+        window.targetId = id;
+        document.getElementById('seg-desc').innerText = `¿Eliminar datos de la Cochera ${nombre}?`;
         document.getElementById('modal-seguridad').style.display = 'flex';
     };
 
@@ -179,9 +197,7 @@
         if(document.getElementById('admin-pass').value === MASTER_KEY) {
             await deleteDoc(doc(db, "cocheras_edificio", window.targetId));
             cerrarSeguridad();
-        } else {
-            alert("Clave incorrecta");
-        }
+        } else { alert("Clave incorrecta"); }
     };
 </script>
 </body>

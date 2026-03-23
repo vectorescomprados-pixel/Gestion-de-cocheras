@@ -1,81 +1,204 @@
-﻿<script type="module">
-    // ... (Mantén el inicio de tu script igual)
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover">
+    <title>SISTEMA COCHERAS UF</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
+        body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; }
+        
+        .status-bar { text-align: center; font-size: 11px; font-weight: bold; color: #22c55e; margin-bottom: 15px; }
+        .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
+        .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        .btn { height: 48px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
 
-    window.procesarCSV = async (event) => {
+        .progress-container { width: 100%; height: 8px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
+        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.3s; }
+
+        input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
+        
+        .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; }
+        .card-header { display: flex; align-items: center; padding: 18px; }
+        .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
+        .card-info { flex: 1; margin-left: 10px; }
+        .card-title { font-size: 20px; font-weight: 900; color: var(--blue); }
+        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
+        
+        .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; }
+        .detail-item { margin-top: 10px; font-size: 13px; color: #8696a0; }
+        .detail-item b { color: #fff; display: block; font-size: 14px; text-transform: uppercase; }
+
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
+        .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
+    </style>
+</head>
+<body>
+
+<div class="status-bar">● SISTEMA RESTAURADO - LISTO</div>
+
+<div class="panel">
+    <div class="row">
+        <button class="btn btn-yellow" id="btn-import"><i class="fas fa-file-upload"></i> SUBIR BASE</button>
+        <button class="btn btn-red" id="btn-inf"><i class="fas fa-camera"></i> INFRACCIÓN</button>
+        <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
+    </div>
+    
+    <div class="progress-container" id="p-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <input type="file" id="csv-file" accept=".csv" style="display:none">
+    <input type="text" id="buscador" placeholder="Buscar UF, Propietario o Patente...">
+</div>
+
+<div id="lista-cocheras">
+    <div style="text-align:center; padding:40px; color:#8696a0;">Conectando con base de datos...</div>
+</div>
+
+<div id="modal-form" class="modal">
+    <div class="modal-content">
+        <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR <span id="label-uf-modal"></span></h2>
+        <input type="text" id="f-prop" placeholder="Nombre Propietario">
+        <input type="text" id="f-id" placeholder="Cochera Asignada">
+        <input type="text" id="f-patente" placeholder="Patente">
+        <input type="text" id="f-auto" placeholder="Vehículo">
+        <textarea id="f-obs" placeholder="Observaciones..."></textarea>
+        <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
+            <button class="btn btn-blue" id="btn-save">GUARDAR</button>
+            <button class="btn btn-grey" id="btn-close">VOLVER</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const config = { 
+        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
+        authDomain: "gestionuf-remoto.firebaseapp.com", 
+        projectId: "gestionuf-remoto", 
+        storageBucket: "gestionuf-remoto.firebasestorage.app", 
+        messagingSenderId: "724452752860", 
+        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
+    };
+
+    const app = initializeApp(config);
+    const db = getFirestore(app);
+    const colRef = collection(db, "cocheras_edificio");
+
+    let todasLasCocheras = [];
+    let currentDocId = null;
+
+    // --- CARGA DE DATOS ---
+    onSnapshot(query(colRef, orderBy("uf")), (snap) => {
+        todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        renderizar(todasLasCocheras);
+    });
+
+    function renderizar(lista) {
+        const cont = document.getElementById('lista-cocheras');
+        cont.innerHTML = lista.length === 0 ? '<div style="text-align:center; padding:40px; color:#8696a0;">No hay datos. Sube un CSV.</div>' : '';
+        lista.forEach(c => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="card-bar"></div>
+                <div class="card-header">
+                    <div class="card-info">
+                        <div class="card-title">UF ${c.uf}</div>
+                        <div style="font-size:14px; color:#fff">${c.prop || '---'}</div>
+                    </div>
+                    <div class="card-actions">
+                        <i class="far fa-eye btn-view" data-id="${c.id}"></i>
+                        <i class="far fa-edit btn-edit" data-id="${c.id}"></i>
+                    </div>
+                </div>
+                <div class="card-detail" id="detail-${c.id}">
+                    <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || 'NO ASIGNADA'}</b></div>
+                    <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
+                    <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
+                    <div class="detail-item">OBSERVACIONES: <b>${c.obs || 'Sin notas'}</b></div>
+                </div>`;
+            cont.appendChild(card);
+        });
+    }
+
+    // --- EVENTOS (Delegados para evitar errores) ---
+    document.addEventListener('click', (e) => {
+        if(e.target.classList.contains('btn-view')) {
+            const id = e.target.getAttribute('data-id');
+            const d = document.getElementById(`detail-${id}`);
+            d.style.display = d.style.display === 'block' ? 'none' : 'block';
+        }
+        if(e.target.classList.contains('btn-edit')) {
+            const id = e.target.getAttribute('data-id');
+            const c = todasLasCocheras.find(x => x.id === id);
+            currentDocId = id;
+            document.getElementById('label-uf-modal').innerText = `(UF ${c.uf})`;
+            document.getElementById('f-prop').value = c.prop || "";
+            document.getElementById('f-id').value = c.id_cochera || "";
+            document.getElementById('f-patente').value = c.patente || "";
+            document.getElementById('f-auto').value = c.auto || "";
+            document.getElementById('f-obs').value = c.obs || "";
+            document.getElementById('modal-form').style.display = 'flex';
+        }
+    });
+
+    document.getElementById('btn-close').onclick = () => document.getElementById('modal-form').style.display = 'none';
+    
+    document.getElementById('btn-save').onclick = async () => {
+        if(!currentDocId) return;
+        await setDoc(doc(db, "cocheras_edificio", currentDocId), {
+            prop: document.getElementById('f-prop').value,
+            id_cochera: document.getElementById('f-id').value,
+            patente: document.getElementById('f-patente').value.toUpperCase(),
+            auto: document.getElementById('f-auto').value,
+            obs: document.getElementById('f-obs').value
+        }, { merge: true });
+        document.getElementById('modal-form').style.display = 'none';
+    };
+
+    // --- IMPORTADOR CSV ---
+    document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
+
+    document.getElementById('csv-file').onchange = async (event) => {
         const file = event.target.files;
         if(!file) return;
-
-        console.log("Archivo detectado:", file.name);
-
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const content = e.target.result;
-            const lines = content.split(/\r?\n/).filter(line => line.trim() !== "");
-            
-            if(lines.length < 1) return alert("El archivo parece estar vacío.");
-
-            // DETECTOR DE SEPARADOR (Coma o Punto y Coma)
-            const firstLine = lines;
-            const separator = firstLine.includes(';') ? ';' : ',';
-            console.log("Separador detectado:", separator);
-
-            const total = lines.length;
-            const container = document.getElementById('p-container');
+            const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+            const sep = lines.includes(';') ? ';' : ',';
             const bar = document.getElementById('progress-bar');
-            
-            container.style.display = 'block';
-            bar.style.width = '0%';
-            bar.style.background = 'var(--yellow)';
+            document.getElementById('p-container').style.display = 'block';
 
-            let procesados = 0;
-            let errores = 0;
+            for(let i=0; i < lines.length; i++) {
+                const cols = lines[i].split(sep);
+                const uf = cols?.replace(/["']/g, "").trim();
+                const prop = cols?.replace(/["']/g, "").trim();
+                if(!uf || uf.toLowerCase().includes("uf")) continue;
 
-            for(let line of lines) {
-                const cols = line.split(separator);
-                
-                // Limpiamos comillas si el Excel las puso (ej: "101")
-                const uf = cols ? cols.replace(/["']/g, "").trim() : "";
-                const prop = cols ? cols.replace(/["']/g, "").trim() : "";
-
-                // Ignorar cabeceras comunes
-                if(uf.toLowerCase() === "uf" || uf.toLowerCase() === "unidad" || !uf) {
-                    procesados++; 
-                    continue; 
-                }
-
-                try {
-                    // REFERENCIA A FIREBASE
-                    await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), {
-                        uf: uf, 
-                        prop: prop
-                    }, { merge: true });
-                    
-                    procesados++;
-                    let porcentaje = (procesados / total) * 100;
-                    bar.style.width = porcentaje + '%';
-                } catch (err) {
-                    console.error("Error subiendo UF:", uf, err);
-                    errores++;
-                }
+                await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), { uf: uf, prop: prop }, { merge: true });
+                bar.style.width = ((i / lines.length) * 100) + '%';
             }
-
-            bar.style.background = errores > 0 ? 'var(--red)' : '#22c55e';
-            
-            setTimeout(() => {
-                container.style.display = 'none';
-                if(errores > 0) {
-                    alert(`Proceso terminado con ${errores} errores. Revisa la consola.`);
-                } else {
-                    alert(`¡Éxito! Se procesaron ${procesados} líneas correctamente.`);
-                }
-                // Limpiar el input para poder subir el mismo archivo si se desea
-                event.target.value = '';
-            }, 1000);
+            alert("Importación finalizada.");
+            document.getElementById('p-container').style.display = 'none';
         };
-
-        reader.onerror = () => alert("Error al leer el archivo físico.");
         reader.readAsText(file);
     };
 
-    // ... (El resto del código se mantiene igual)
+    // --- BUSCADOR ---
+    document.getElementById('buscador').oninput = (e) => {
+        const v = e.target.value.toLowerCase();
+        renderizar(todasLasCocheras.filter(c => 
+            c.uf.toLowerCase().includes(v) || 
+            (c.prop && c.prop.toLowerCase().includes(v)) ||
+            (c.patente && c.patente.toLowerCase().includes(v))
+        ));
+    };
 </script>
+</body>
+</html>

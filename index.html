@@ -1,0 +1,314 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
+    <title>SISTEMA DE COCHERAS PRO</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* Paleta de colores exacta de tus fotos */
+        :root {
+            --bg: #0b141a; /* Negro profundo de fondo */
+            --card: #111b21; /* Gris oscuro de tarjetas y panel */
+            --blue: #2563eb;
+            --red: #e11d48;
+            --yellow: #f59e0b;
+            --grey: #4b5563;
+            --text-main: #e9edef;
+            --text-sec: #8696a0;
+            --border: #222d34;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: var(--bg);
+            color: var(--text-main);
+            font-family: 'Segoe UI', sans-serif;
+            overflow-x: hidden;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- Estructura Principal --- */
+        .app {
+            max-width: 480px; /* Adaptado a móvil */
+            margin: 0 auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        /* --- Barra de Estado --- */
+        .status-bar {
+            text-align: center;
+            font-size: 11px;
+            font-weight: bold;
+            color: #22c55e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 15px;
+        }
+
+        /* --- Panel de Botones (Imagen 1) --- */
+        .panel {
+            background: var(--card);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            margin-bottom: 15px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Estilo base de botones exacto */
+        .btn {
+            height: 48px;
+            border-radius: 8px;
+            border: none;
+            font-size: 13px;
+            font-weight: 900;
+            text-transform: uppercase;
+            cursor: pointer;
+            color: #fff;
+            transition: opacity 0.2s;
+        }
+        .btn:active { opacity: 0.7; }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        /* Botones por color */
+        .btn-grey { background: var(--grey); }
+        .btn-blue { background: var(--blue); }
+        .btn-red { background: var(--red); }
+        .btn-yellow { background: var(--yellow); color: #000; }
+
+        /* --- Buscador (Imagen 1) --- */
+        .search-container {
+            margin: 15px 0;
+        }
+        input[type="text"] {
+            width: 100%;
+            height: 50px;
+            background: #1a242b;
+            border: 1px solid #333;
+            border-radius: 8px;
+            color: #fff;
+            padding: 0 15px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        input[type="text"]::placeholder {
+            color: #667781;
+        }
+
+        /* --- Lista de Cocheras (Imagen 1 y 3) --- */
+        .list {
+            margin-top: 20px;
+        }
+
+        /* Tarjeta de Cochera exacta */
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 18px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Barra de color lateral (Identificador) */
+        .card-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 6px;
+            background: var(--yellow); /* Variable por estado */
+        }
+
+        .card-info {
+            flex: 1;
+            margin-left: 10px;
+        }
+
+        /* Texto exacto: ID Cochera */
+        .card-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--blue);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        /* Texto exacto: Patente/Vehículo */
+        .card-subtitle {
+            font-size: 14px;
+            color: var(--text-main);
+            margin-bottom: 4px;
+        }
+        .card-details {
+            font-size: 13px;
+            color: var(--text-sec);
+        }
+
+        /* Acciones de la tarjeta (Ver, Editar, Borrar) */
+        .card-actions {
+            display: flex;
+            gap: 15px;
+            color: var(--blue);
+            font-size: 18px;
+            margin-left: 15px;
+        }
+        .card-actions i { cursor: pointer; }
+        .card-actions i.fa-trash-alt { color: var(--red); }
+
+        /* --- Modal de Confirmación de Borrado --- */
+        .modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: var(--card);
+            width: 90%;
+            max-width: 320px;
+            padding: 25px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+        .modal-content h3 {
+            margin: 0 0 15px 0;
+            color: #fff;
+            font-size: 18px;
+        }
+        .modal-content p {
+            color: var(--text-sec);
+            font-size: 14px;
+            margin-bottom: 25px;
+        }
+        .modal-btns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .modal-btn {
+            height: 40px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-btn-red {
+            background: var(--red);
+            color: #fff;
+        }
+        .modal-btn-grey {
+            background: var(--grey);
+            color: #fff;
+        }
+
+        /* --- Pantalla de Carga/No Datos --- */
+        .no-data {
+            text-align: center;
+            padding: 50px 0;
+            color: var(--text-sec);
+        }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    
+    <div class="status-bar">● EN LÍNEA - SEGURIDAD ACTIVA</div>
+
+    <div class="panel">
+        <div class="row">
+            <button class="btn btn-grey">ESTADO</button>
+            <button class="btn btn-grey">PATENTES</button>
+            <button class="btn btn-red">CERRAR</button>
+        </div>
+        <div class="row">
+            <button class="btn btn-blue">NUEVA VEH.</button>
+            <button class="btn btn-grey">IMPORTAR</button>
+            <button class="btn btn-grey">RESPALDO</button>
+        </div>
+
+        <div class="search-container">
+            <input type="text" placeholder="Buscar por Cochera, UF o Patente...">
+        </div>
+
+        <div class="row">
+            <button class="btn btn-blue">BUSCAR</button>
+            <button class="btn btn-grey">LIMPIAR</button>
+            <button class="btn btn-yellow">CARGANDO...</button>
+        </div>
+    </div>
+
+    <div class="list" id="cocheras-list">
+        <div class="card">
+            <div class="card-bar"></div> <div class="card-info">
+                <div class="card-title">Cochera 01 (S1)</div>
+                <div class="card-subtitle">AF 123 CD | Ford Focus</div>
+                <div class="card-details">Viculada a UF: 0024A</div>
+            </div>
+            <div class="card-actions">
+                <i class="far fa-eye"></i>
+                <i class="far fa-edit"></i>
+                <i class="far fa-trash-alt" onclick="confirmarBorrado('Cochera 01')"></i>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-bar" style="background:#22c55e"></div> <div class="card-info">
+                <div class="card-title">Cochera 02 (S1)</div>
+                <div class="card-subtitle">-- DISPONIBLE --</div>
+                <div class="card-details">--</div>
+            </div>
+            <div class="card-actions">
+                <i class="far fa-eye" style="opacity:0.3"></i>
+                <i class="far fa-edit"></i>
+                <i class="far fa-trash-alt"></i>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="modal" id="modal-borrar">
+    <div class="modal-content">
+        <h3>SEGURIDAD REQUERIDA</h3>
+        <p>¿Estás seguro de que quieres eliminar este vehículo de <b id="cochera-a-borrar"></b>?</p>
+        <div class="modal-btns">
+            <button class="modal-btn modal-btn-red">BORRAR</button>
+            <button class="modal-btn modal-btn-grey" onclick="cerrarModal()">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Lógica para imitar la interfaz
+    function confirmarBorrado(nombreCochera) {
+        document.getElementById('cochera-a-borrar').innerText = nombreCochera;
+        document.getElementById('modal-borrar').style.display = 'flex';
+    }
+
+    function cerrarModal() {
+        document.getElementById('modal-borrar').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>

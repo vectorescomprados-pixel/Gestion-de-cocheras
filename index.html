@@ -2,13 +2,13 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>SISTEMA COCHERAS - CARGA DIRECTA</title>
+    <title>SISTEMA COCHERAS - CARGA DIRECTA V2</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
         .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; max-width: 500px; margin: auto; }
-        #csv-text { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #333; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 10px; }
+        #csv-text { width: 100%; height: 120px; background: #000; color: #0f0; border: 1px solid #333; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 10px; padding: 10px; box-sizing: border-box; }
         .btn-import { background: #25d366; color: black; padding: 15px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; white-space: pre-wrap; }
         .card { background: #1c272e; padding: 12px; margin-top: 10px; border-radius: 8px; text-align: left; border-left: 5px solid #25d366; }
     </style>
 </head>
@@ -16,8 +16,8 @@
 
 <div class="box">
     <h3>IMPORTACIÓN DIRECTA</h3>
-    <p style="font-size: 12px; color: #8696a0;">Pega aquí el contenido de tu archivo CSV:</p>
-    <textarea id="csv-text" placeholder="UF,Propietario,TelProp..."></textarea>
+    <p style="font-size: 12px; color: #8696a0;">Copia del Bloc de Notas y pega aquí:</p>
+    <textarea id="csv-text" placeholder="Pega aquí el contenido..."></textarea>
     
     <button class="btn-import" onclick="procesarPegado()">SINCRONIZAR CON FIREBASE</button>
     
@@ -50,7 +50,12 @@
     };
 
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        document.getElementById('lista').innerHTML = snap.docs.map(d => {
+        const contenedor = document.getElementById('lista');
+        if (snap.empty) {
+            contenedor.innerHTML = "<p style='color:#555;'>No hay datos en la nube.</p>";
+            return;
+        }
+        contenedor.innerHTML = snap.docs.map(d => {
             const i = d.data();
             return `<div class="card"><b>UF ${i.uf}</b> - ${i.prop}</div>`;
         }).join('');
@@ -58,16 +63,12 @@
 
     window.procesarPegado = async function() {
         const texto = document.getElementById('csv-text').value;
-        if (!texto || texto.length < 10) {
-            alert("Primero pega el contenido del archivo CSV");
-            return;
-        }
+        if (!texto || texto.length < 5) return;
 
-        window.logger("Procesando datos pegados...");
+        window.logger("Procesando...");
 
         try {
-            // Separar por líneas
-            const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
+            const filas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
             window.logger("Filas detectadas: " + filas.length);
 
             let batch = writeBatch(db);
@@ -75,30 +76,34 @@
 
             for (let i = 0; i < filas.length; i++) {
                 const fila = filas[i];
-                if (fila.toUpperCase().startsWith("UF")) continue;
+                // Saltamos el encabezado si existe
+                if (fila.toUpperCase().includes("UF,PROPIETARIO")) continue;
 
-                const c = fila.split(',');
-                // Estructura del Respaldo: UF(0), Propietario(1), TelProp(2), Inquilino(3)
-                const ufRaw = c.replace(/[^0-9]/g, '');
-                if (!ufRaw) continue;
+                const columnas = fila.split(',');
+                
+                // Extraemos la UF (está en la columna 0)
+                let ufLimpia = (columnas || "").toString().replace(/[^0-9]/g, '');
+                
+                if (!ufLimpia) continue;
 
-                const ufID = ufRaw.padStart(4, '0');
-                const prop = c ? c.trim() : "S/D";
-                const inq = c ? c.trim() : "";
-                const nombreMostrar = inq ? `${prop} / ${inq}` : prop;
+                const ufID = ufLimpia.padStart(4, '0');
+                const prop = (columnas || "S/D").trim();
+                const inq = (columnas || "").trim();
+                
+                const nombreFinal = inq ? prop + " / " + inq : prop;
 
-                const ref = doc(db, "cocheras_edificio", "UF-" + ufID);
-                batch.set(ref, {
+                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
+                batch.set(docRef, {
                     uf: ufID,
-                    cochera: ufRaw,
-                    prop: nombreMostrar,
+                    cochera: ufLimpia,
+                    prop: nombreFinal,
                     patente: "",
                     auto: ""
                 }, { merge: true });
 
                 contador++;
 
-                if (contador % 450 === 0) {
+                if (contador % 400 === 0) {
                     await batch.commit();
                     batch = writeBatch(db);
                     window.logger("Guardando bloque...");
@@ -106,11 +111,12 @@
             }
 
             await batch.commit();
-            window.logger("¡CARGA EXITOSA! " + contador + " registros sincronizados.");
-            document.getElementById('csv-text').value = ""; // Limpiar
+            window.logger("¡CARGA EXITOSA! " + contador + " registros.");
+            document.getElementById('csv-text').value = "";
 
         } catch (err) {
             window.logger("ERROR: " + err.message);
+            console.error(err);
         }
     };
 </script>

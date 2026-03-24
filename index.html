@@ -1,152 +1,147 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA COCHERAS PRO</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --text: #e9edef; --border: #2a3942; }
-        body { margin: 0; background: var(--bg); font-family: sans-serif; color: var(--text); padding: 10px; }
-        .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
-        .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .btn { height: 45px; border-radius: 8px; border: none; font-size: 10px; font-weight: bold; text-transform: uppercase; color: #fff; cursor: pointer; }
-        .btn-yellow { background: var(--yellow); color: #000; }
-        .btn-red { background: var(--red); }
-        .btn-grey { background: #4b5563; }
-        .progress-container { width: 100%; height: 25px; background: #000; border-radius: 5px; margin: 15px 0; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
-        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
-        #progress-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; line-height: 25px; z-index: 2; font-size: 11px; }
-        .card { background: #111b21; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); padding: 15px; border-left: 5px solid var(--blue); }
-        .card-title { font-size: 18px; font-weight: bold; color: var(--blue); margin-bottom: 5px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #1a242b; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0" />
+  <title>SISTEMA COCHERAS PRO</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <style>
+    :root { --bg: #0b141a; --panel: #111b21; --card: #111b21; --border: #2a3942; --text: #e9edef; --muted: #8696a0; --blue: #1d6ed7; --yellow: #f59e0b; --red: #e91e63; --grey: #4b5563; }
+    body { margin: 0; background: var(--bg); font-family: sans-serif; color: var(--text); padding: 10px; }
+    .panel { background: var(--panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .btn { height: 45px; border-radius: 8px; border: none; font-size: 11px; font-weight: 700; text-transform: uppercase; cursor: pointer; color: #fff; }
+    .btn-yellow { background: var(--yellow); color: #000; } .btn-red { background: var(--red); } .btn-grey { background: var(--grey); }
+    input { width: 100%; padding: 12px; margin: 10px 0 0 0; background: #1a242b; border: 1px solid #333; color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
+    .progress-container { width: 100%; height: 26px; background: #000; border-radius: 8px; margin: 15px 0 0 0; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
+    #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s linear; }
+    #progress-text { position: absolute; inset: 0; display: grid; place-items: center; color: #000; font-weight: 800; font-size: 12px; z-index: 2; }
+    .card { background: var(--card); border-radius: 12px; border: 1px solid var(--border); padding: 14px; margin-bottom: 8px; border-left: 5px solid var(--blue); }
+    .card-title { font-size: 18px; font-weight: 800; color: var(--blue); margin-bottom: 6px; }
+    .line { font-size: 14px; color: var(--text); margin: 2px 0; }
+    .line-yellow { font-size: 12px; color: var(--yellow); margin-top: 6px; }
+    .empty { text-align: center; color: var(--muted); padding: 18px 10px; }
+  </style>
 </head>
 <body>
-
-<div class="panel">
+  <div class="panel">
     <div class="row">
-        <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()">SUBIR CSV</button>
-        <button class="btn btn-red" id="btn-borrar">BORRAR TODO</button>
-        <button class="btn btn-grey" onclick="location.reload()">RECARGAR</button>
+      <button class="btn btn-yellow" id="btn-subir">SUBIR CSV</button>
+      <button class="btn btn-red" id="btn-borrar">BORRAR TODO</button>
+      <button class="btn btn-grey" onclick="location.reload()">RECARGAR</button>
     </div>
     <div class="progress-container" id="p-container">
-        <div id="progress-text">ESPERANDO...</div>
-        <div id="progress-bar"></div>
+      <div id="progress-text">ESPERANDO...</div>
+      <div id="progress-bar"></div>
     </div>
-    <input type="file" id="csv-file" accept=".csv" style="display:none">
-    <input type="text" id="buscador" placeholder="Buscar UF (ej: 0001)...">
-</div>
+    <input type="file" id="csv-file" accept=".csv" style="display:none" />
+    <input type="text" id="buscador" placeholder="Buscar UF o nombre..." />
+  </div>
+  <div id="lista-container"></div>
 
-<div id="lista-container"></div>
-
-<script type="module">
+  <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, deleteDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDocs, writeBatch, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const config = { 
-        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
-        authDomain: "gestionuf-remoto.firebaseapp.com", 
-        projectId: "gestionuf-remoto", 
-        storageBucket: "gestionuf-remoto.firebasestorage.app", 
-        messagingSenderId: "724452752860", 
-        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo",
+      authDomain: "gestionuf-remoto.firebaseapp.com",
+      projectId: "gestionuf-remoto",
+      storageBucket: "gestionuf-remoto.firebasestorage.app",
+      messagingSenderId: "724452752860",
+      appId: "1:724452752860:web:4d25585addcdcbd146e319"
     };
 
-    const app = initializeApp(config);
+    const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
-
     let cache = [];
 
-    // ESCUCHAR FIREBASE
+    // --- RENDER ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        cache = snap.docs.map(d => d.data());
-        render(cache);
+      cache = snap.docs.map(d => d.data());
+      const cont = document.getElementById("lista-container");
+      if (cache.length === 0) { cont.innerHTML = `<div class="empty">Base vacía. Subí el CSV.</div>`; return; }
+      cont.innerHTML = cache.map(item => `
+        <div class="card">
+          <div class="card-title">UF ${item.uf}</div>
+          <div class="line">${item.prop || '---'}</div>
+          <div class="line-yellow">Patente: ${item.patente || '---'}</div>
+        </div>
+      `).join("");
     });
 
-    function render(datos) {
-        const cont = document.getElementById('lista-container');
-        if (datos.length === 0) {
-            cont.innerHTML = '<p style="text-align:center; color:#8696a0">Base vacía. Cargue el CSV.</p>';
-            return;
+    // --- BORRAR ---
+    document.getElementById("btn-borrar").onclick = async () => {
+      if (!confirm("¿Borrar base?")) return;
+      const snap = await getDocs(colRef);
+      let batch = writeBatch(db);
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      alert("Base borrada.");
+    };
+
+    // --- IMPORTAR (Corregido para tus 5 columnas) ---
+    document.getElementById("btn-subir").onclick = () => document.getElementById("csv-file").click();
+    document.getElementById("csv-file").onchange = (e) => {
+      const file = e.target.files;
+      if (!file) return;
+      const reader = new FileReader();
+      const pCont = document.getElementById("p-container");
+      const pBar = document.getElementById("progress-bar");
+      const pText = document.getElementById("progress-text");
+
+      pCont.style.display = "block";
+
+      reader.onload = async (ev) => {
+        const text = ev.target.result;
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        let batch = writeBatch(db);
+        let count = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/); // Split robusto
+          if (cols.length < 2) continue;
+
+          let ufRaw = cols.replace(/"/g, "").trim();
+          if (isNaN(parseInt(ufRaw))) continue;
+
+          const ufId = ufRaw.padStart(4, "0");
+          const prop = cols?.replace(/"/g, "").trim() || "";
+          const inq = cols?.replace(/"/g, "").trim() || ""; // Inquilino está en columna 3
+          const nombre = inq ? `${prop} / ${inq}` : prop;
+
+          const ref = doc(db, "cocheras_edificio", "UF-" + ufId);
+          batch.set(ref, { uf: ufId, prop: nombre, patente: "", auto: "" }, { merge: true });
+          
+          count++;
+          if (count % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+
+          let p = Math.round((i / (lines.length - 1)) * 100);
+          pBar.style.width = p + "%";
+          pText.textContent = `CARGANDO: ${p}%`;
         }
-        cont.innerHTML = datos.map(i => `
-            <div class="card">
-                <div class="card-title">UF ${i.uf}</div>
-                <div style="font-size:14px; color:#fff">${i.prop || '---'}</div>
-                <div style="font-size:12px; color:var(--yellow)">Patente: ${i.patente || '---'}</div>
-            </div>
-        `).join('');
-    }
-
-    // BORRAR
-    document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar base?")) return;
-        const s = await getDocs(colRef);
-        const b = writeBatch(db);
-        s.docs.forEach(d => b.delete(d.ref));
-        await b.commit();
-        alert("Base borrada");
+        await batch.commit();
+        pCont.style.display = "none";
+        alert(`¡Éxito! Se cargaron ${count} unidades.`);
+      };
+      reader.readAsText(file, "ISO-8859-1");
     };
 
-    // --- IMPORTADOR ULTRA-RESISTENTE ---
-    document.getElementById('csv-file').onchange = (e) => {
-        const file = e.target.files;
-        if(!file) return;
-
-        const reader = new FileReader();
-        document.getElementById('p-container').style.display = 'block';
-
-        reader.onload = async (ev) => {
-            const texto = ev.target.result;
-            // Separar por líneas y limpiar
-            const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
-            
-            let procesadas = 0;
-
-            for(let i = 0; i < lineas.length; i++) {
-                // regex para ignorar comas dentro de comillas
-                const cols = lineas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
-                
-                let ufNum = cols?.replace(/"/g, "").trim();
-
-                // Saltar si no es número (ej: el encabezado "UF")
-                if(!ufNum || isNaN(parseInt(ufNum))) continue;
-
-                const ufId = ufNum.padStart(4, '0');
-                const prop = cols?.replace(/"/g, "").trim() || "";
-                const inq = cols?.replace(/"/g, "").trim() || "";
-                const nombre = inq ? `${prop} / ${inq}` : prop;
-
-                // Subir a Firebase con ID forzado
-                await setDoc(doc(db, "cocheras_edificio", "UF-" + ufId), {
-                    uf: ufId,
-                    prop: nombre,
-                    patente: "",
-                    auto: ""
-                }, { merge: true });
-
-                procesadas++;
-                let porc = Math.round((i / (lineas.length - 1)) * 100);
-                document.getElementById('progress-bar').style.width = porc + "%";
-                document.getElementById('progress-text').innerText = "CARGANDO: " + porc + "%";
-            }
-
-            document.getElementById('p-container').style.display = 'none';
-            alert("Se cargaron " + procesadas + " unidades.");
-        };
-        reader.readAsText(file);
+    // --- BUSCADOR ---
+    document.getElementById("buscador").oninput = (e) => {
+      const v = e.target.value.toLowerCase();
+      let ufQ = v; if (v && !isNaN(v)) ufQ = v.padStart(4, "0");
+      const filtered = cache.filter(item => item.uf.includes(ufQ) || item.prop.toLowerCase().includes(v));
+      const cont = document.getElementById("lista-container");
+      cont.innerHTML = filtered.map(item => `
+        <div class="card">
+          <div class="card-title">UF ${item.uf}</div>
+          <div class="line">${item.prop || '---'}</div>
+          <div class="line-yellow">Patente: ${item.patente || '---'}</div>
+        </div>
+      `).join("");
     };
-
-    // BUSCADOR NORMALIZADO
-    document.getElementById('buscador').oninput = (e) => {
-        let v = e.target.value.trim().toLowerCase();
-        let queryUF = v;
-        if(!isNaN(v) && v !== "") queryUF = v.padStart(4, '0');
-        
-        render(cache.filter(c => c.uf.includes(queryUF) || c.prop.toLowerCase().includes(v)));
-    };
-</script>
+  </script>
 </body>
 </html>

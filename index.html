@@ -15,16 +15,14 @@
         .btn-red { background: var(--red); }
         .btn-grey { background: #4b5563; }
         input { width: 100%; padding: 14px; margin-top: 10px; background: #1a242b; border: 1px solid var(--border); color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        
         .progress-container { width: 100%; height: 26px; background: #000; border-radius: 8px; margin-top: 10px; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
         #p-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
         #p-text { position: absolute; inset: 0; display: grid; place-items: center; color: #000; font-weight: bold; font-size: 11px; z-index: 2; }
-
         .card { background: #111b21; border-radius: 10px; border: 1px solid var(--border); padding: 12px; margin-bottom: 8px; border-left: 5px solid var(--blue); }
         .card-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
         .uf-num { font-size: 18px; font-weight: bold; color: var(--blue); }
-        .coch-num { background: var(--blue); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-        .prop-name { font-size: 14px; color: #fff; }
+        .coch-num { background: var(--blue); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+        .prop-name { font-size: 14px; color: #fff; margin: 5px 0; }
         .patente-view { margin-top: 8px; font-family: monospace; color: var(--yellow); font-size: 15px; border-top: 1px solid #2a3942; padding-top: 5px; }
     </style>
 </head>
@@ -64,7 +62,6 @@
     const colRef = collection(db, "cocheras_edificio");
     let baseLocal = [];
 
-    // --- CARGAR DATOS EN TIEMPO REAL ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         baseLocal = snap.docs.map(d => d.data());
         dibujar(baseLocal);
@@ -73,22 +70,21 @@
     function dibujar(datos) {
         const contenedor = document.getElementById('lista');
         if (datos.length === 0) {
-            contenedor.innerHTML = '<p style="text-align:center; color:#8696a0">Base vacía. Cargue el archivo CSV.</p>';
+            contenedor.innerHTML = '<p style="text-align:center; color:#8696a0; margin-top:20px;">Base vacía. Cargue el archivo CSV para comenzar.</p>';
             return;
         }
         contenedor.innerHTML = datos.map(i => `
             <div class="card">
                 <div class="card-header">
                     <span class="uf-num">UF ${i.uf}</span>
-                    <span class="coch-num">Cochera: ${i.cochera || 'S/N'}</span>
+                    <span class="coch-num">COCHERA ${i.cochera || i.uf}</span>
                 </div>
-                <div class="prop-name">${i.prop || '---'}</div>
+                <div class="prop-name">${i.prop || 'S/D'}</div>
                 <div class="patente-view"><i class="fas fa-car"></i> ${i.patente || 'SIN PATENTE'}</div>
             </div>
         `).join('');
     }
 
-    // --- IMPORTADOR ULTRA-ADAPTADO ---
     document.getElementById('csv-file').onchange = (e) => {
         const file = e.target.files;
         if(!file) return;
@@ -104,17 +100,19 @@
             let total = 0;
 
             for(let i = 1; i < lineas.length; i++) {
-                // Probamos con punto y coma primero, luego con coma
-                let columnas = lineas[i].split(';');
-                if (columnas.length < 2) columnas = lineas[i].split(',');
-
-                const ufRaw = columnas?.trim();
+                // Forzamos el separador punto y coma que tiene tu archivo
+                const columnas = lineas[i].split(';');
+                
+                let ufRaw = columnas?.trim();
                 if(!ufRaw || isNaN(parseInt(ufRaw))) continue;
 
+                // NORMALIZACIÓN: Convertimos "1" en "0001"
                 const ufID = ufRaw.padStart(4, '0');
-                const nCochera = columnas?.trim() || "";
-                const prop = columnas?.trim() || "";
-                const inq = columnas?.trim() || "";
+                
+                // Mapeo según tu archivo real:
+                const nCochera = columnas?.trim() || ufRaw; // Columna B
+                const prop = columnas?.trim() || "";       // Columna C
+                const inq = columnas?.trim() || "";        // Columna E
                 const nombreFull = inq ? `${prop} / ${inq}` : prop;
 
                 const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
@@ -127,22 +125,24 @@
                 }, { merge: true });
 
                 total++;
-                if(total % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+                if(total % 400 === 0) { 
+                    await batch.commit(); 
+                    batch = writeBatch(db); 
+                }
 
                 let progreso = Math.round((i / (lineas.length - 1)) * 100);
                 document.getElementById('p-bar').style.width = progreso + "%";
-                document.getElementById('p-text').innerText = "PROCESANDO: " + progreso + "%";
+                document.getElementById('p-text').innerText = "CARGANDO: " + progreso + "%";
             }
 
             await batch.commit();
             document.getElementById('p-container').style.display = 'none';
-            alert("Se han cargado " + total + " registros exitosamente.");
+            alert("¡Listo! Se cargaron " + total + " registros.");
         };
-        // ISO-8859-1 para leer caracteres como la 'ñ' o acentos de Excel
+        // ISO-8859-1 es CLAVE para que no falle con tus nombres (ej. López)
         reader.readAsText(file, "ISO-8859-1");
     };
 
-    // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
         const busqueda = e.target.value.toLowerCase();
         let ufNorm = busqueda;
@@ -156,14 +156,12 @@
         dibujar(filtrados);
     };
 
-    // --- BORRAR ---
     document.getElementById('btn-borrar').onclick = async () => {
         if(!confirm("¿Borrar toda la base?")) return;
         const snap = await getDocs(colRef);
         const b = writeBatch(db);
         snap.docs.forEach(d => b.delete(d.ref));
         await b.commit();
-        alert("Base borrada");
     };
 </script>
 </body>

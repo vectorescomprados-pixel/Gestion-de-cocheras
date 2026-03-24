@@ -2,33 +2,67 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>SISTEMA COCHERAS - CARGA FINAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA COCHERAS - LISTADO</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
-        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; max-width: 500px; margin: auto; }
-        #csv-text { width: 100%; height: 120px; background: #000; color: #0f0; border: 1px solid #333; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 10px; padding: 10px; box-sizing: border-box; }
-        .btn-import { background: #25d366; color: black; padding: 15px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; white-space: pre-wrap; }
-        .card { background: #1c272e; padding: 12px; margin-top: 10px; border-radius: 8px; text-align: left; border-left: 5px solid #25d366; }
+        body { background: #0b141a; color: white; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; padding: 15px; margin: 0; }
+        .header { position: sticky; top: 0; background: #0b141a; padding-bottom: 15px; z-index: 100; }
+        
+        /* Buscador */
+        .search-box { 
+            width: 100%; 
+            padding: 12px 15px; 
+            background: #202c33; 
+            border: 1px solid #2a3942; 
+            border-radius: 10px; 
+            color: white; 
+            font-size: 16px; 
+            box-sizing: border-box;
+            outline: none;
+        }
+        .search-box:focus { border-color: #00a884; }
+
+        /* Contenedor de Tarjetas - Ahora en columna */
+        #lista { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+            margin-top: 10px;
+        }
+
+        /* Diseño de cada Registro */
+        .card { 
+            background: #111b21; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border-left: 4px solid #00a884; /* Verde tipo WhatsApp */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .uf-num { font-weight: bold; color: #00a884; font-size: 1.1em; }
+        .prop-name { color: #e9edef; font-size: 1em; }
+        .cochera-info { color: #8696a0; font-size: 0.9em; }
+
+        .no-results { text-align: center; color: #8696a0; margin-top: 50px; }
     </style>
 </head>
 <body>
 
-<div class="box">
-    <h3>IMPORTACIÓN DIRECTA</h3>
-    <p style="font-size: 12px; color: #8696a0;">Pega aquí el contenido del archivo CSV:</p>
-    <textarea id="csv-text" placeholder="Pega el contenido aquí..."></textarea>
-    
-    <button class="btn-import" onclick="procesarPegado()">SINCRONIZAR CON FIREBASE</button>
-    
-    <div id="log">Estado: Esperando datos...</div>
+<div class="header">
+    <h2 style="margin: 10px 0;">Cocheras Edificio</h2>
+    <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF o Nombre...">
 </div>
 
-<div id="lista" style="max-width:500px; margin: 20px auto;"></div>
+<div id="lista">
+    <p style="text-align:center; color:#8696a0;">Cargando datos...</p>
+</div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -43,82 +77,41 @@
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
 
-    window.logger = (m) => {
-        const l = document.getElementById('log');
-        l.innerText += "\n> " + m;
-        l.scrollTop = l.scrollHeight;
-    };
+    let todosLosDatos = [];
 
+    // 1. Escuchar datos de Firebase
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        const contenedor = document.getElementById('lista');
-        contenedor.innerHTML = snap.docs.map(d => {
-            const i = d.data();
-            return `<div class="card"><b>UF ${i.uf}</b> - ${i.prop}</div>`;
-        }).join('');
+        todosLosDatos = snap.docs.map(d => d.data());
+        renderizar(todosLosDatos);
     });
 
-    window.procesarPegado = async function() {
-        const texto = document.getElementById('csv-text').value;
-        if (!texto || texto.length < 5) return;
-
-        window.logger("Procesando...");
-
-        try {
-            const filas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
-            window.logger("Filas detectadas: " + filas.length);
-
-            let batch = writeBatch(db);
-            let contador = 0;
-
-            for (let i = 0; i < filas.length; i++) {
-                const fila = filas[i];
-                if (fila.toUpperCase().includes("UF,PROPIETARIO")) continue;
-
-                const columnas = fila.split(',');
-                
-                // Limpieza ultra-segura de UF
-                let ufRaw = (columnas || "");
-                let ufLimpia = String(ufRaw).replace(/[^0-9]/g, '');
-                
-                if (!ufLimpia) continue;
-
-                const ufID = ufLimpia.padStart(4, '0');
-                
-                // Tratamiento seguro de Propietario e Inquilino
-                let propRaw = (columnas || "S/D");
-                let inqRaw = (columnas || "");
-                
-                let prop = String(propRaw).trim();
-                let inq = String(inqRaw).trim();
-                
-                const nombreFinal = inq ? prop + " / " + inq : prop;
-
-                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                batch.set(docRef, {
-                    uf: ufID,
-                    cochera: ufLimpia,
-                    prop: nombreFinal,
-                    patente: "",
-                    auto: ""
-                }, { merge: true });
-
-                contador++;
-
-                if (contador % 400 === 0) {
-                    await batch.commit();
-                    batch = writeBatch(db);
-                    window.logger("Guardando bloque...");
-                }
-            }
-
-            await batch.commit();
-            window.logger("¡CARGA EXITOSA! " + contador + " registros.");
-            document.getElementById('csv-text').value = "";
-
-        } catch (err) {
-            window.logger("ERROR: " + err.message);
+    // 2. Función para dibujar las tarjetas
+    function renderizar(datos) {
+        const contenedor = document.getElementById('lista');
+        
+        if (datos.length === 0) {
+            contenedor.innerHTML = '<div class="no-results">No se encontraron registros.</div>';
+            return;
         }
-    };
+
+        contenedor.innerHTML = datos.map(i => `
+            <div class="card">
+                <div class="uf-num">UF ${i.uf}</div>
+                <div class="prop-name">${i.prop}</div>
+                <div class="cochera-info">Cochera asignada: ${i.cochera}</div>
+            </div>
+        `).join('');
+    }
+
+    // 3. Lógica del Buscador
+    document.getElementById('buscador').addEventListener('input', (e) => {
+        const busqueda = e.target.value.toLowerCase();
+        const filtrados = todosLosDatos.filter(i => {
+            return i.uf.includes(busqueda) || i.prop.toLowerCase().includes(busqueda);
+        });
+        renderizar(filtrados);
+    });
+
 </script>
 </body>
 </html>

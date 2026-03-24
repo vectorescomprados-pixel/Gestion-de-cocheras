@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
     <title>SISTEMA COCHERAS PRO</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --text: #e9edef; --border: #2a3942; }
@@ -16,11 +15,11 @@
         .btn-red { background: var(--red); }
         .btn-grey { background: #4b5563; }
         .progress-container { width: 100%; height: 25px; background: #000; border-radius: 5px; margin: 15px 0; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
-        #progress-bar { width: 0%; height: 100%; background: var(--yellow); }
+        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
         #progress-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; line-height: 25px; z-index: 2; font-size: 11px; }
         .card { background: #111b21; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); padding: 15px; border-left: 5px solid var(--blue); }
-        .card-title { font-size: 18px; font-weight: bold; color: var(--blue); }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #1a242b; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        .card-title { font-size: 18px; font-weight: bold; color: var(--blue); margin-bottom: 5px; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #1a242b; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
     </style>
 </head>
 <body>
@@ -28,18 +27,18 @@
 <div class="panel">
     <div class="row">
         <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()">SUBIR CSV</button>
-        <button class="btn btn-red" id="btn-clear">BORRAR TODO</button>
+        <button class="btn btn-red" id="btn-borrar">BORRAR TODO</button>
         <button class="btn btn-grey" onclick="location.reload()">RECARGAR</button>
     </div>
     <div class="progress-container" id="p-container">
-        <div id="progress-text">PROCESANDO...</div>
+        <div id="progress-text">ESPERANDO...</div>
         <div id="progress-bar"></div>
     </div>
     <input type="file" id="csv-file" accept=".csv" style="display:none">
     <input type="text" id="buscador" placeholder="Buscar UF (ej: 0001)...">
 </div>
 
-<div id="lista"></div>
+<div id="lista-container"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -60,81 +59,93 @@
 
     let cache = [];
 
+    // ESCUCHAR FIREBASE
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         cache = snap.docs.map(d => d.data());
         render(cache);
     });
 
     function render(datos) {
-        const list = document.getElementById('lista');
-        if(datos.length === 0) { list.innerHTML = '<p style="text-align:center">Base vacía</p>'; return; }
-        list.innerHTML = datos.map(item => `
+        const cont = document.getElementById('lista-container');
+        if (datos.length === 0) {
+            cont.innerHTML = '<p style="text-align:center; color:#8696a0">Base vacía. Cargue el CSV.</p>';
+            return;
+        }
+        cont.innerHTML = datos.map(i => `
             <div class="card">
-                <div class="card-title">UF ${item.uf}</div>
-                <div style="font-size:14px">${item.prop || '---'}</div>
+                <div class="card-title">UF ${i.uf}</div>
+                <div style="font-size:14px; color:#fff">${i.prop || '---'}</div>
+                <div style="font-size:12px; color:var(--yellow)">Patente: ${i.patente || '---'}</div>
             </div>
         `).join('');
     }
 
-    document.getElementById('btn-clear').onclick = async () => {
+    // BORRAR
+    document.getElementById('btn-borrar').onclick = async () => {
         if(!confirm("¿Borrar base?")) return;
         const s = await getDocs(colRef);
         const b = writeBatch(db);
         s.docs.forEach(d => b.delete(d.ref));
         await b.commit();
+        alert("Base borrada");
     };
 
-    // --- IMPORTADOR CON PAPAPARSE (ANTIFALLOS) ---
+    // --- IMPORTADOR ULTRA-RESISTENTE ---
     document.getElementById('csv-file').onchange = (e) => {
         const file = e.target.files;
         if(!file) return;
 
+        const reader = new FileReader();
         document.getElementById('p-container').style.display = 'block';
 
-        Papa.parse(file, {
-            header: true, // Detecta automáticamente UF, Propietario, etc.
-            skipEmptyLines: true,
-            complete: async (results) => {
-                const data = results.data;
-                const bar = document.getElementById('progress-bar');
-                const txt = document.getElementById('progress-text');
+        reader.onload = async (ev) => {
+            const texto = ev.target.result;
+            // Separar por líneas y limpiar
+            const lineas = texto.split(/\r?\n/).filter(l => l.trim().length > 0);
+            
+            let procesadas = 0;
 
-                for(let i = 0; i < data.length; i++) {
-                    let row = data[i];
-                    // Buscamos la columna UF sin importar espacios
-                    let ufKey = Object.keys(row).find(k => k.trim() === "UF");
-                    let propKey = Object.keys(row).find(k => k.trim() === "Propietario");
-                    let inqKey = Object.keys(row).find(k => k.trim() === "Inquilino");
+            for(let i = 0; i < lineas.length; i++) {
+                // regex para ignorar comas dentro de comillas
+                const cols = lineas[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                
+                let ufNum = cols?.replace(/"/g, "").trim();
 
-                    let ufVal = row[ufKey]?.trim();
-                    if(!ufVal || isNaN(parseInt(ufVal))) continue;
+                // Saltar si no es número (ej: el encabezado "UF")
+                if(!ufNum || isNaN(parseInt(ufNum))) continue;
 
-                    let ufId = ufVal.padStart(4, '0');
-                    let nombre = (row[propKey] || "") + (row[inqKey] ? " / " + row[inqKey] : "");
+                const ufId = ufNum.padStart(4, '0');
+                const prop = cols?.replace(/"/g, "").trim() || "";
+                const inq = cols?.replace(/"/g, "").trim() || "";
+                const nombre = inq ? `${prop} / ${inq}` : prop;
 
-                    await setDoc(doc(db, "cocheras_edificio", "UF-" + ufId), {
-                        uf: ufId,
-                        prop: nombre.trim(),
-                        patente: "",
-                        auto: ""
-                    }, { merge: true });
+                // Subir a Firebase con ID forzado
+                await setDoc(doc(db, "cocheras_edificio", "UF-" + ufId), {
+                    uf: ufId,
+                    prop: nombre,
+                    patente: "",
+                    auto: ""
+                }, { merge: true });
 
-                    let p = Math.round(((i + 1) / data.length) * 100);
-                    bar.style.width = p + "%";
-                    txt.innerText = "CARGANDO: " + p + "%";
-                }
-                alert("CARGA EXITOSA");
-                document.getElementById('p-container').style.display = 'none';
+                procesadas++;
+                let porc = Math.round((i / (lineas.length - 1)) * 100);
+                document.getElementById('progress-bar').style.width = porc + "%";
+                document.getElementById('progress-text').innerText = "CARGANDO: " + porc + "%";
             }
-        });
+
+            document.getElementById('p-container').style.display = 'none';
+            alert("Se cargaron " + procesadas + " unidades.");
+        };
+        reader.readAsText(file);
     };
 
-    // BUSCADOR INTELIGENTE
+    // BUSCADOR NORMALIZADO
     document.getElementById('buscador').oninput = (e) => {
         let v = e.target.value.trim().toLowerCase();
-        let busqueda = v;
-        if(!isNaN(v) && v !== "") busqueda = v.padStart(4, '0');
-        render(cache.filter(c => c.uf.includes(busqueda) || c.prop.toLowerCase().includes(v)));
+        let queryUF = v;
+        if(!isNaN(v) && v !== "") queryUF = v.padStart(4, '0');
+        
+        render(cache.filter(c => c.uf.includes(queryUF) || c.prop.toLowerCase().includes(v)));
     };
 </script>
 </body>

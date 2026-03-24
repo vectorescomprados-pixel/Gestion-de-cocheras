@@ -15,52 +15,38 @@
         .btn-red { background: var(--red); }
         .btn-grey { background: #4b5563; }
         
-        /* BARRA DE CARGA VISIBLE */
         .progress-container { width: 100%; height: 25px; background: #000; border-radius: 5px; margin: 15px 0; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
-        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.2s; }
-        #progress-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; line-height: 25px; z-index: 2; }
+        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
+        #progress-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; line-height: 25px; z-index: 2; font-size: 11px; }
 
-        .card { background: #111b21; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); padding: 15px; position: relative; border-left: 5px solid var(--blue); }
+        .card { background: #111b21; border-radius: 10px; margin-bottom: 8px; border: 1px solid var(--border); padding: 15px; border-left: 5px solid var(--blue); position: relative; }
         .card-title { font-size: 18px; font-weight: bold; color: var(--blue); margin-bottom: 5px; }
-        .card-sub { font-size: 14px; color: #8696a0; }
-        .card-actions { position: absolute; right: 15px; top: 15px; font-size: 20px; color: var(--blue); display: flex; gap: 15px; }
+        .card-sub { font-size: 14px; color: #8696a0; margin-bottom: 3px; }
+        .card-actions { position: absolute; right: 15px; top: 15px; font-size: 20px; color: var(--blue); }
         
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal-content { background: var(--card); width: 100%; max-width: 400px; padding: 20px; border-radius: 15px; }
-        input { width: 100%; padding: 12px; margin: 10px 0; background: #1a242b; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; }
+        input { width: 100%; padding: 12px; margin: 10px 0; background: #1a242b; border: 1px solid #333; color: #fff; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
     </style>
 </head>
 <body>
 
 <div class="panel">
     <div class="row">
-        <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()">CARGAR CSV</button>
-        <button class="btn btn-red" id="btn-delete-all">BORRAR TODO</button>
-        <button class="btn btn-grey" onclick="location.reload()">REFRESCAR</button>
+        <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()">SUBIR CSV</button>
+        <button class="btn btn-red" id="btn-clear">BORRAR TODO</button>
+        <button class="btn btn-grey" onclick="location.reload()">RECARGAR</button>
     </div>
     
     <div class="progress-container" id="p-container">
-        <div id="progress-text">PROCESANDO... 0%</div>
+        <div id="progress-text">ESPERANDO ARCHIVO...</div>
         <div id="progress-bar"></div>
     </div>
     
     <input type="file" id="csv-file" accept=".csv" style="display:none">
-    <input type="text" id="buscador" placeholder="Buscar UF o Nombre...">
+    <input type="text" id="buscador" placeholder="Buscar por UF o Nombre...">
 </div>
 
-<div id="lista"></div>
-
-<div id="modal-edit" class="modal">
-    <div class="modal-content">
-        <h3 id="edit-title" style="margin-top:0">Editar</h3>
-        <input type="text" id="edit-prop" placeholder="Nombre">
-        <input type="text" id="edit-patente" placeholder="Patente">
-        <input type="text" id="edit-auto" placeholder="Vehículo">
-        <div class="row">
-            <button class="btn btn-yellow" id="btn-save">GUARDAR</button>
-            <button class="btn btn-grey" onclick="document.getElementById('modal-edit').style.display='none'">CERRAR</button>
-        </div>
-    </div>
+<div id="lista-container">
+    <p style="text-align:center; color:#8696a0">Cargando base de datos...</p>
 </div>
 
 <script type="module">
@@ -80,127 +66,96 @@
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
 
-    let datosLocales = [];
-    let idEditando = null;
+    let baseDatos = [];
 
-    // LEER FIREBASE
+    // ESCUCHAR CAMBIOS (Siempre activo)
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        datosLocales = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        render(datosLocales);
+        baseDatos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        console.log("Datos recibidos:", baseDatos.length);
+        dibujar(baseDatos);
     });
 
-    function render(data) {
-        const cont = document.getElementById('lista');
-        if(data.length === 0) {
-            cont.innerHTML = '<p style="text-align:center;color:#8696a0">Base vacía. Cargue el CSV.</p>';
+    function dibujar(datos) {
+        const contenedor = document.getElementById('lista-container');
+        if (datos.length === 0) {
+            contenedor.innerHTML = '<p style="text-align:center; color:#8696a0">No hay datos cargados.<br>Usa el botón "SUBIR CSV".</p>';
             return;
         }
-        cont.innerHTML = data.map(c => `
+        
+        contenedor.innerHTML = datos.map(item => `
             <div class="card">
-                <div class="card-title">UF ${c.uf}</div>
-                <div class="card-sub">${c.prop || 'Sin nombre'}</div>
-                <div class="card-sub"><b>Patente:</b> ${c.patente || '---'}</div>
-                <div class="card-actions">
-                    <i class="fas fa-edit" onclick="abrirEditor('${c.id}')"></i>
-                </div>
+                <div class="card-title">UF ${item.uf}</div>
+                <div class="card-sub"><b>Titular:</b> ${item.prop || '---'}</div>
+                <div class="card-sub"><b>Patente:</b> ${item.patente || 'SIN DATOS'}</div>
+                <div class="card-actions"><i class="fas fa-chevron-right"></i></div>
             </div>
         `).join('');
     }
 
     // BORRAR TODO
-    document.getElementById('btn-delete-all').onclick = async () => {
-        if(!confirm("¿Borrar todos los datos?")) return;
-        const snap = await getDocs(colRef);
-        const batch = writeBatch(db);
-        snap.docs.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-        alert("Base borrada.");
+    document.getElementById('btn-clear').onclick = async () => {
+        if(!confirm("¿Eliminar los 87 registros?")) return;
+        const s = await getDocs(colRef);
+        const b = writeBatch(db);
+        s.docs.forEach(d => b.delete(d.ref));
+        await b.commit();
     };
 
-    // --- IMPORTADOR CRÍTICO ---
-    document.getElementById('csv-file').onchange = function(e) {
-        const file = e.target.files;
-        if(!file) return;
+    // IMPORTADOR MEJORADO
+    document.getElementById('csv-file').onchange = (e) => {
+        const archivo = e.target.files;
+        if(!archivo) return;
 
-        const reader = new FileReader();
+        const lector = new FileReader();
         const pCont = document.getElementById('p-container');
         const pBar = document.getElementById('progress-bar');
         const pText = document.getElementById('progress-text');
 
         pCont.style.display = 'block';
 
-        reader.onload = async (event) => {
-            try {
-                let csvContent = event.target.result;
-                // Limpiar caracteres invisibles al inicio (BOM)
-                csvContent = csvContent.replace(/^\uFEFF/, "");
-                
-                const lines = csvContent.split(/\r?\n/).filter(l => l.trim() !== "");
-                console.log("Lineas leídas:", lines.length);
+        lector.onload = async (evento) => {
+            const contenido = evento.target.result;
+            const lineas = contenido.split(/\r?\n/).filter(l => l.trim() !== "");
+            
+            // Empezamos en 1 para saltar el encabezado (UF, Propietario...)
+            for(let i = 1; i < lineas.length; i++) {
+                const columnas = lineas[i].split(',');
+                const uf = columnas?.trim();
 
-                for(let i = 0; i < lines.length; i++) {
-                    const cols = lines[i].split(',');
-                    const ufRaw = cols.trim();
+                if(!uf || isNaN(parseInt(uf))) continue;
 
-                    // Saltar si es la palabra UF o no es número
-                    if(ufRaw.toUpperCase() === "UF" || isNaN(parseInt(ufRaw))) continue;
+                // Mantenemos el formato 0001, 0002...
+                const ufFormateada = uf.padStart(4, '0');
+                const prop = columnas?.trim() || "";
+                const inq = columnas?.trim() || "";
+                const mostrar = inq ? `${prop} / ${inq}` : prop;
 
-                    const ufFinal = ufRaw.padStart(4, '0');
-                    const prop = cols?.trim() || "";
-                    const inq = cols?.trim() || "";
-                    const nombre = inq ? `${prop} / Inq: ${inq}` : prop;
+                await setDoc(doc(db, "cocheras_edificio", "UF-" + ufFormateada), {
+                    uf: ufFormateada,
+                    prop: mostrar,
+                    patente: "",
+                    auto: ""
+                }, { merge: true });
 
-                    // Subir a Firebase
-                    await setDoc(doc(db, "cocheras_edificio", "UF-" + ufFinal), {
-                        uf: ufFinal,
-                        prop: nombre,
-                        patente: "",
-                        auto: ""
-                    }, { merge: true });
-
-                    // Actualizar barra
-                    let porc = Math.round(((i + 1) / lines.length) * 100);
-                    pBar.style.width = porc + "%";
-                    pText.innerText = "PROCESANDO... " + porc + "%";
-                }
-                alert("CARGA COMPLETA");
-            } catch (err) {
-                alert("ERROR: " + err.message);
-            } finally {
-                pCont.style.display = 'none';
-                this.value = ""; // Reset input
+                let porcentaje = Math.round((i / (lineas.length - 1)) * 100);
+                pBar.style.width = porcentaje + "%";
+                pText.innerText = "CARGANDO: " + porcentaje + "%";
             }
+            
+            alert("¡Importación terminada!");
+            pCont.style.display = 'none';
         };
-        reader.readAsText(file);
+        lector.readAsText(archivo);
     };
 
-    // FUNCIONES GLOBALES PARA EL EDITOR
-    window.abrirEditor = (id) => {
-        const c = datosLocales.find(x => x.id === id);
-        idEditando = id;
-        document.getElementById('edit-title').innerText = "Editar UF " + c.uf;
-        document.getElementById('edit-prop').value = c.prop || "";
-        document.getElementById('edit-patente').value = c.patente || "";
-        document.getElementById('edit-auto').value = c.auto || "";
-        document.getElementById('modal-edit').style.display = 'flex';
-    };
-
-    document.getElementById('btn-save').onclick = async () => {
-        const btn = document.getElementById('btn-save');
-        btn.innerText = "GUARDANDO...";
-        await setDoc(doc(db, "cocheras_edificio", idEditando), {
-            prop: document.getElementById('edit-prop').value,
-            patente: document.getElementById('edit-patente').value.toUpperCase().trim(),
-            auto: document.getElementById('edit-auto').value
-        }, { merge: true });
-        btn.innerText = "GUARDAR";
-        document.getElementById('modal-edit').style.display = 'none';
-    };
-
-    // BUSCADOR
+    // BUSCADOR EN TIEMPO REAL
     document.getElementById('buscador').oninput = (e) => {
-        const v = e.target.value.toLowerCase();
-        render(datosLocales.filter(c => c.uf.includes(v) || c.prop.toLowerCase().includes(v)));
+        const busqueda = e.target.value.toLowerCase();
+        const filtrados = baseDatos.filter(c => 
+            c.uf.includes(busqueda) || 
+            c.prop.toLowerCase().includes(busqueda)
+        );
+        dibujar(filtrados);
     };
 </script>
 </body>

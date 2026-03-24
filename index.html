@@ -3,43 +3,28 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA COCHERAS PRO</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>TEST COCHERAS</title>
     <style>
-        :root { --bg: #0b141a; --panel: #111b21; --card: #1c272e; --border: #2a3942; --text: #e9edef; --blue: #1d6ed7; --yellow: #f59e0b; --red: #e91e63; }
+        :root { --bg: #0b141a; --panel: #111b21; --card: #1c272e; --border: #2a3942; --text: #e9edef; --blue: #1d6ed7; --yellow: #f59e0b; }
         body { margin: 0; background: var(--bg); font-family: sans-serif; color: var(--text); padding: 10px; }
-        .panel { background: var(--panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
-        .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .btn { height: 45px; border-radius: 8px; border: none; font-size: 10px; font-weight: bold; text-transform: uppercase; cursor: pointer; color: #fff; }
-        .btn-yellow { background: var(--yellow); color: #000; }
-        .btn-red { background: var(--red); }
-        .btn-grey { background: #4b5563; }
-        input { width: 100%; padding: 14px; margin-top: 10px; background: #1a242b; border: 1px solid var(--border); color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        .progress-container { width: 100%; height: 26px; background: #000; border-radius: 8px; margin-top: 10px; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
-        #p-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
-        #p-text { position: absolute; inset: 0; display: grid; place-items: center; color: #000; font-weight: bold; font-size: 11px; z-index: 2; }
-        .card { background: #111b21; border-radius: 10px; border: 1px solid var(--border); padding: 12px; margin-bottom: 8px; border-left: 5px solid var(--blue); }
-        .card-header { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .uf-num { font-size: 18px; font-weight: bold; color: var(--blue); }
-        .coch-num { background: var(--blue); color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .prop-name { font-size: 14px; color: #fff; margin: 5px 0; }
-        .patente-view { margin-top: 8px; font-family: monospace; color: var(--yellow); font-size: 15px; border-top: 1px solid #2a3942; padding-top: 5px; }
+        .panel { background: var(--panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; text-align: center; }
+        .btn { padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 10px; font-size: 16px; }
+        .btn-blue { background: var(--blue); color: #fff; }
+        .btn-red { background: #e91e63; color: #fff; }
+        .card { background: var(--card); border-radius: 10px; padding: 15px; margin-bottom: 10px; border-left: 5px solid var(--yellow); }
+        .status { font-size: 12px; color: var(--yellow); margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
 <div class="panel">
-    <div class="row">
-        <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()">SUBIR CSV</button>
-        <button class="btn btn-red" id="btn-borrar">BORRAR</button>
-        <button class="btn btn-grey" onclick="location.reload()">RECARGAR</button>
-    </div>
-    <div class="progress-container" id="p-container">
-        <div id="p-text">ESPERANDO...</div>
-        <div id="p-bar"></div>
-    </div>
+    <h3>PASO 1: LIMPIAR</h3>
+    <button class="btn btn-red" id="btn-borrar">BORRAR BASE ACTUAL</button>
+    <hr>
+    <h3>PASO 2: CARGAR PRUEBA</h3>
+    <div id="status-msg" class="status">Estado: Listo para probar</div>
+    <button class="btn btn-blue" onclick="document.getElementById('csv-file').click()">SELECCIONAR PRUEBA.CSV</button>
     <input type="file" id="csv-file" accept=".csv" style="display:none">
-    <input type="text" id="buscador" placeholder="Buscar UF, Cochera o Nombre...">
 </div>
 
 <div id="lista"></div>
@@ -60,108 +45,67 @@
     const app = initializeApp(config);
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
-    let baseLocal = [];
 
+    // Mostrar datos
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        baseLocal = snap.docs.map(d => d.data());
-        dibujar(baseLocal);
-    });
-
-    function dibujar(datos) {
-        const contenedor = document.getElementById('lista');
-        if (datos.length === 0) {
-            contenedor.innerHTML = '<p style="text-align:center; color:#8696a0; margin-top:20px;">Base vacía. Cargue el archivo CSV para comenzar.</p>';
-            return;
-        }
-        contenedor.innerHTML = datos.map(i => `
+        const cont = document.getElementById('lista');
+        const docs = snap.docs.map(d => d.data());
+        document.getElementById('status-msg').innerText = `Documentos en la nube: ${docs.length}`;
+        
+        cont.innerHTML = docs.map(i => `
             <div class="card">
-                <div class="card-header">
-                    <span class="uf-num">UF ${i.uf}</span>
-                    <span class="coch-num">COCHERA ${i.cochera || i.uf}</span>
-                </div>
-                <div class="prop-name">${i.prop || 'S/D'}</div>
-                <div class="patente-view"><i class="fas fa-car"></i> ${i.patente || 'SIN PATENTE'}</div>
+                <b>UF: ${i.uf} (Cochera: ${i.cochera})</b><br>
+                <span>${i.prop}</span>
             </div>
         `).join('');
-    }
+    });
 
+    // Proceso de carga
     document.getElementById('csv-file').onchange = (e) => {
         const file = e.target.files;
         if(!file) return;
 
         const reader = new FileReader();
-        document.getElementById('p-container').style.display = 'block';
-
         reader.onload = async (ev) => {
-            const contenido = ev.target.result;
-            const lineas = contenido.split(/\r?\n/).filter(l => l.trim().length > 0);
-            
-            let batch = writeBatch(db);
-            let total = 0;
+            try {
+                const text = ev.target.result;
+                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                alert("Archivo leído. Líneas encontradas: " + lines.length);
 
-            for(let i = 1; i < lineas.length; i++) {
-                // Forzamos el separador punto y coma que tiene tu archivo
-                const columnas = lineas[i].split(';');
-                
-                let ufRaw = columnas?.trim();
-                if(!ufRaw || isNaN(parseInt(ufRaw))) continue;
+                let batch = writeBatch(db);
+                let procesados = 0;
 
-                // NORMALIZACIÓN: Convertimos "1" en "0001"
-                const ufID = ufRaw.padStart(4, '0');
-                
-                // Mapeo según tu archivo real:
-                const nCochera = columnas?.trim() || ufRaw; // Columna B
-                const prop = columnas?.trim() || "";       // Columna C
-                const inq = columnas?.trim() || "";        // Columna E
-                const nombreFull = inq ? `${prop} / ${inq}` : prop;
+                for(let i = 1; i < lines.length; i++) {
+                    const cols = lines[i].split(';'); // Usamos punto y coma del ejemplo
+                    if(cols.length < 3) continue;
 
-                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                batch.set(docRef, {
-                    uf: ufID,
-                    cochera: nCochera,
-                    prop: nombreFull,
-                    patente: "",
-                    auto: ""
-                }, { merge: true });
+                    const uf = cols.trim().padStart(4, '0');
+                    const cochera = cols.trim();
+                    const prop = cols.trim();
+                    const inq = cols ? cols.trim() : "";
+                    const nombre = inq ? `${prop} / ${inq}` : prop;
 
-                total++;
-                if(total % 400 === 0) { 
-                    await batch.commit(); 
-                    batch = writeBatch(db); 
+                    const ref = doc(db, "cocheras_edificio", "UF-" + uf);
+                    batch.set(ref, { uf, cochera, prop: nombre, patente: "" }, { merge: true });
+                    procesados++;
                 }
 
-                let progreso = Math.round((i / (lineas.length - 1)) * 100);
-                document.getElementById('p-bar').style.width = progreso + "%";
-                document.getElementById('p-text').innerText = "CARGANDO: " + progreso + "%";
+                await batch.commit();
+                alert("¡EXITO! Se enviaron " + procesados + " filas a Firebase.");
+            } catch (err) {
+                alert("ERROR: " + err.message);
             }
-
-            await batch.commit();
-            document.getElementById('p-container').style.display = 'none';
-            alert("¡Listo! Se cargaron " + total + " registros.");
         };
-        // ISO-8859-1 es CLAVE para que no falle con tus nombres (ej. López)
         reader.readAsText(file, "ISO-8859-1");
     };
 
-    document.getElementById('buscador').oninput = (e) => {
-        const busqueda = e.target.value.toLowerCase();
-        let ufNorm = busqueda;
-        if(busqueda && !isNaN(busqueda)) ufNorm = busqueda.padStart(4, '0');
-
-        const filtrados = baseLocal.filter(i => 
-            i.uf.includes(ufNorm) || 
-            (i.cochera && i.cochera.toLowerCase().includes(busqueda)) ||
-            (i.prop && i.prop.toLowerCase().includes(busqueda))
-        );
-        dibujar(filtrados);
-    };
-
     document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar toda la base?")) return;
-        const snap = await getDocs(colRef);
+        if(!confirm("¿Borrar todo?")) return;
+        const s = await getDocs(colRef);
         const b = writeBatch(db);
-        snap.docs.forEach(d => b.delete(d.ref));
+        s.docs.forEach(d => b.delete(d.ref));
         await b.commit();
+        alert("Base borrada");
     };
 </script>
 </body>

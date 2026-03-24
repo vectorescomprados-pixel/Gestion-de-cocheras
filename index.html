@@ -3,26 +3,31 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover">
-    <title>SISTEMA COCHERAS UF</title>
+    <title>SISTEMA COCHERAS PRO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
         body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; }
         
-        .status-bar { text-align: center; font-size: 11px; font-weight: bold; color: #22c55e; margin-bottom: 15px; }
+        /* Estadísticas */
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .stat-card { background: var(--card); padding: 10px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
+        .stat-val { display: block; font-size: 22px; font-weight: 900; color: var(--blue); }
+        .stat-label { font-size: 10px; text-transform: uppercase; color: #8696a0; font-weight: bold; }
+
         .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
         .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .btn { height: 48px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
 
-        .progress-container { width: 100%; height: 8px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
+        .progress-container { width: 100%; height: 6px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
         #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.3s; }
 
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         
         .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; }
-        .card-header { display: flex; align-items: center; padding: 18px; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
+        .card-header { display: flex; align-items: center; padding: 18px; }
         .card-info { flex: 1; margin-left: 10px; }
         .card-title { font-size: 20px; font-weight: 900; color: var(--blue); }
         .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
@@ -37,7 +42,16 @@
 </head>
 <body>
 
-<div class="status-bar">● SISTEMA RESTAURADO - LISTO</div>
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-val" id="st-total">0</span>
+        <span class="stat-label">Total UFs</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-val" id="st-ocup" style="color:var(--yellow)">0</span>
+        <span class="stat-label">Con Vehículo</span>
+    </div>
+</div>
 
 <div class="panel">
     <div class="row">
@@ -55,17 +69,17 @@
 </div>
 
 <div id="lista-cocheras">
-    <div style="text-align:center; padding:40px; color:#8696a0;">Conectando con base de datos...</div>
+    <div style="text-align:center; padding:40px; color:#8696a0;">Iniciando sistema...</div>
 </div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
         <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR <span id="label-uf-modal"></span></h2>
-        <input type="text" id="f-prop" placeholder="Nombre Propietario">
-        <input type="text" id="f-id" placeholder="Cochera Asignada">
-        <input type="text" id="f-patente" placeholder="Patente">
-        <input type="text" id="f-auto" placeholder="Vehículo">
-        <textarea id="f-obs" placeholder="Observaciones..."></textarea>
+        <input type="text" id="f-prop" placeholder="Nombre Propietario / Inquilino">
+        <input type="text" id="f-id" placeholder="Nro Cochera Asignada">
+        <input type="text" id="f-patente" placeholder="Patente (Ej: AF123CD)">
+        <input type="text" id="f-auto" placeholder="Vehículo (Marca/Modelo)">
+        <textarea id="f-obs" placeholder="Observaciones adicionales..."></textarea>
         <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
             <button class="btn btn-blue" id="btn-save">GUARDAR</button>
             <button class="btn btn-grey" id="btn-close">VOLVER</button>
@@ -89,24 +103,32 @@
     const app = initializeApp(config);
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
+    const MASTER_WA = "1131552679";
 
     let todasLasCocheras = [];
     let currentDocId = null;
 
-    // --- CARGA DE DATOS ---
+    // --- CARGA DE DATOS Y ESTADÍSTICAS ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        actualizarEstadisticas();
         renderizar(todasLasCocheras);
     });
 
+    function actualizarEstadisticas() {
+        document.getElementById('st-total').innerText = todasLasCocheras.length;
+        const ocupadas = todasLasCocheras.filter(c => c.patente && c.patente.trim() !== "").length;
+        document.getElementById('st-ocup').innerText = ocupadas;
+    }
+
     function renderizar(lista) {
         const cont = document.getElementById('lista-cocheras');
-        cont.innerHTML = lista.length === 0 ? '<div style="text-align:center; padding:40px; color:#8696a0;">No hay datos. Sube un CSV.</div>' : '';
+        cont.innerHTML = lista.length === 0 ? '<div style="text-align:center; padding:40px; color:#8696a0;">Sin registros. Importe el CSV.</div>' : '';
         lista.forEach(c => {
             const card = document.createElement('div');
             card.className = 'card';
             card.innerHTML = `
-                <div class="card-bar"></div>
+                <div class="card-bar" style="background:${c.patente ? 'var(--yellow)' : 'var(--blue)'}"></div>
                 <div class="card-header">
                     <div class="card-info">
                         <div class="card-title">UF ${c.uf}</div>
@@ -119,15 +141,15 @@
                 </div>
                 <div class="card-detail" id="detail-${c.id}">
                     <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || 'NO ASIGNADA'}</b></div>
-                    <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
-                    <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
+                    <div class="detail-item">PATENTE: <b>${c.patente || 'SIN PATENTE'}</b></div>
+                    <div class="detail-item">VEHÍCULO: <b>${c.auto || 'SIN VEHÍCULO'}</b></div>
                     <div class="detail-item">OBSERVACIONES: <b>${c.obs || 'Sin notas'}</b></div>
                 </div>`;
             cont.appendChild(card);
         });
     }
 
-    // --- EVENTOS (Delegados para evitar errores) ---
+    // --- MANEJO DE EVENTOS ---
     document.addEventListener('click', (e) => {
         if(e.target.classList.contains('btn-view')) {
             const id = e.target.getAttribute('data-id');
@@ -155,19 +177,17 @@
         await setDoc(doc(db, "cocheras_edificio", currentDocId), {
             prop: document.getElementById('f-prop').value,
             id_cochera: document.getElementById('f-id').value,
-            patente: document.getElementById('f-patente').value.toUpperCase(),
+            patente: document.getElementById('f-patente').value.toUpperCase().trim(),
             auto: document.getElementById('f-auto').value,
             obs: document.getElementById('f-obs').value
         }, { merge: true });
         document.getElementById('modal-form').style.display = 'none';
     };
 
-    // --- IMPORTADOR CSV ---
+    // --- IMPORTADOR CSV (Detección de formato mejorada) ---
     document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
-
-    document.getElementById('csv-file').onchange = async (event) => {
-        const file = event.target.files;
-        if(!file) return;
+    document.getElementById('csv-file').onchange = (ev) => {
+        const file = ev.target.files;
         const reader = new FileReader();
         reader.onload = async (e) => {
             const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
@@ -184,7 +204,7 @@
                 await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), { uf: uf, prop: prop }, { merge: true });
                 bar.style.width = ((i / lines.length) * 100) + '%';
             }
-            alert("Importación finalizada.");
+            alert("Base sincronizada exitosamente.");
             document.getElementById('p-container').style.display = 'none';
         };
         reader.readAsText(file);
@@ -198,6 +218,24 @@
             (c.prop && c.prop.toLowerCase().includes(v)) ||
             (c.patente && c.patente.toLowerCase().includes(v))
         ));
+    };
+
+    // --- MÓDULO INFRACCIÓN (WhatsApp + Cámara) ---
+    document.getElementById('btn-inf').onclick = () => {
+        const camInput = document.createElement('input');
+        camInput.type = 'file';
+        camInput.accept = 'image/*';
+        camInput.capture = 'environment';
+        camInput.onchange = (e) => {
+            if(e.target.files) {
+                const obs = prompt("Motivo de la infracción:");
+                if(obs !== null) {
+                    const msg = encodeURIComponent(`*REPORTE COCHERAS*%0A*Motivo:* ${obs}%0A_Adjunte la foto capturada._`);
+                    window.open(`https://wa.me/549${MASTER_WA}?text=${msg}`);
+                }
+            }
+        };
+        camInput.click();
     };
 </script>
 </body>

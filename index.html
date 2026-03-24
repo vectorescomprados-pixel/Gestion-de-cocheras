@@ -3,61 +3,52 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - LISTADO</title>
+    <title>GESTIÓN COCHERAS - SISTEMA LIMPIO</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
-        .header { position: sticky; top: 0; background: #0b141a; padding-bottom: 15px; z-index: 100; border-bottom: 1px solid #2a3942; }
+        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
+        .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
+        .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; }
         
-        .search-box { 
-            width: 100%; 
-            padding: 12px 15px; 
-            background: #202c33; 
-            border: 1px solid #2a3942; 
-            border-radius: 10px; 
-            color: white; 
-            font-size: 16px; 
-            box-sizing: border-box;
-            outline: none;
-            margin-top: 10px;
-        }
-        .search-box:focus { border-color: #00a884; }
+        /* Contenedor de lista */
+        #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+        
+        /* Tarjeta */
+        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; text-transform: uppercase; }
+        .nombre { font-size: 1.2em; font-weight: 500; margin: 5px 0; color: #e9edef; }
+        .info-extra { color: #8696a0; font-size: 0.9em; }
+        .cochera-badge { background: #202c33; color: #00a884; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
 
-        #lista { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 12px; 
-            margin-top: 20px;
-        }
-
-        .card { 
-            background: #111b21; 
-            padding: 15px; 
-            border-radius: 8px; 
-            border-left: 5px solid #00a884;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
-
-        .uf-num { font-weight: bold; color: #00a884; font-size: 1.2em; margin-bottom: 4px; }
-        .prop-name { color: #e9edef; font-size: 1.1em; margin-bottom: 4px; }
-        .cochera-info { color: #8696a0; font-size: 0.9em; }
-
-        .no-results { text-align: center; color: #8696a0; margin-top: 50px; }
+        /* Panel de Control (Abajo) */
+        .admin-panel { margin-top: 50px; padding: 20px; border: 1px dashed #333; border-radius: 10px; }
+        textarea { width: 100%; height: 80px; background: #000; color: #0f0; border: 1px solid #333; font-family: monospace; margin-top: 10px; }
+        .btn { padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn-red { background: #e91e63; color: white; }
+        .btn-green { background: #00a884; color: white; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin: 10px 0; color: #e9edef;">Cocheras Edificio</h2>
+    <h3 style="margin:0 0 10px 0;">Cocheras Edificio</h3>
     <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF o Nombre...">
 </div>
 
 <div id="lista">
-    <p style="text-align:center; color:#8696a0;">Conectando con la base de datos...</p>
+    <p style="text-align:center; color:#8696a0;">Cargando registros...</p>
+</div>
+
+<div class="admin-panel">
+    <h4 style="margin:0;">Panel de Administración</h4>
+    <button class="btn btn-red" onclick="borrarBaseCompleta()">1. BORRAR TODA LA BASE (Limpiar duplicados)</button>
+    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
+    <button class="btn btn-green" onclick="importarDatos()">2. CARGAR DATOS NUEVOS</button>
+    <div id="log" style="font-size:10px; color:#0f0; margin-top:10px;"></div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -72,48 +63,90 @@
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
 
-    let todosLosDatos = [];
+    let datosLocales = [];
 
-    // 1. Escuchar datos en tiempo real
+    // --- ESCUCHAR LA BASE ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        todosLosDatos = snap.docs.map(d => d.data());
-        renderizar(todosLosDatos);
+        datosLocales = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        dibujarLista(datosLocales);
     });
 
-    // 2. Función para dibujar las tarjetas (LIMPIEZA INCLUIDA)
-    function renderizar(datos) {
-        const contenedor = document.getElementById('lista');
-        
-        // ESTA LÍNEA EVITA LOS DUPLICADOS:
-        contenedor.innerHTML = ""; 
+    function dibujarLista(datos) {
+        const listado = document.getElementById('lista');
+        listado.innerHTML = ""; // LIMPIEZA TOTAL antes de dibujar
 
         if (datos.length === 0) {
-            contenedor.innerHTML = '<div class="no-results">No se encontraron coincidencias.</div>';
+            listado.innerHTML = "<p style='color:#8696a0; text-align:center;'>No hay datos. Use el panel de abajo.</p>";
             return;
         }
 
-        // Dibujamos cada tarjeta
         datos.forEach(i => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.innerHTML = `
-                <div class="uf-num">UF ${i.uf}</div>
-                <div class="prop-name">${i.prop}</div>
-                <div class="cochera-info">Asignada: ${i.cochera}</div>
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `
+                <div class="uf-tag">Unidad Funcional ${i.uf}</div>
+                <div class="nombre">${i.prop}</div>
+                <div class="info-extra">
+                    Cochera: <span class="cochera-badge">${i.cochera || 'S/D'}</span>
+                </div>
             `;
-            contenedor.appendChild(card);
+            listado.appendChild(div);
         });
     }
 
-    // 3. Filtro del buscador
-    document.getElementById('buscador').addEventListener('input', (e) => {
-        const busqueda = e.target.value.toLowerCase();
-        const filtrados = todosLosDatos.filter(i => {
-            return i.uf.includes(busqueda) || i.prop.toLowerCase().includes(busqueda);
-        });
-        renderizar(filtrados);
-    });
+    // --- BUSCADOR ---
+    document.getElementById('buscador').oninput = (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtrados = datosLocales.filter(i => i.uf.includes(term) || i.prop.toLowerCase().includes(term));
+        dibujarLista(filtrados);
+    };
 
+    // --- ACCIONES DE ADMIN ---
+    window.borrarBaseCompleta = async () => {
+        if(!confirm("¿Eliminar todos los registros? Esto quitará los duplicados.")) return;
+        const snap = await getDocs(colRef);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        alert("Base de datos limpia.");
+    };
+
+    window.importarDatos = async () => {
+        const texto = document.getElementById('csv-input').value;
+        if(!texto) return alert("Pega el contenido del CSV");
+
+        const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
+        let batch = writeBatch(db);
+        let cont = 0;
+
+        lineas.forEach((linea, index) => {
+            if (linea.toUpperCase().includes("UF,PROPIETARIO")) return;
+
+            const c = linea.split(',');
+            const ufNum = c.replace(/[^0-9]/g, '').padStart(4, '0');
+            if(!ufNum || ufNum === "0000") return;
+
+            const prop = (c || "").trim();
+            const inq = (c || "").trim();
+            
+            // LÓGICA DE COCHERA: Intentamos sacarla del campo Inquilino si existe
+            // Si el inquilino dice "Jose Mora 13b", intentamos mostrarlo
+            const cochera = inq.split(' ').pop(); // Toma la última palabra (ej: 13b)
+
+            const ref = doc(db, "cocheras_edificio", "UF-" + ufNum);
+            batch.set(ref, {
+                uf: ufNum,
+                prop: inq ? `${prop} / ${inq}` : prop,
+                cochera: cochera || ufNum, // Si no detecta nada, pone la UF
+                patente: ""
+            }, { merge: true });
+            cont++;
+        });
+
+        await batch.commit();
+        document.getElementById('csv-input').value = "";
+        alert("Cargados " + cont + " registros.");
+    };
 </script>
 </body>
 </html>

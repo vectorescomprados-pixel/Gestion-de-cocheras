@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - CARGA VELOZ</title>
+    <title>SISTEMA COCHERAS - CARGA FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
@@ -57,7 +57,6 @@
 
     let datosLocales = [];
 
-    // --- ESCUCHA TIEMPO REAL ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         datosLocales = snap.docs.map(d => d.data());
         renderizar(datosLocales);
@@ -78,51 +77,49 @@
         });
     }
 
-    // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
         const t = e.target.value.toLowerCase();
         renderizar(datosLocales.filter(i => i.uf.includes(t) || i.prop.toLowerCase().includes(t)));
     };
 
-    // --- FUNCIONES GLOBALES ---
-    
     window.borrarTodo = async () => {
         if(!confirm("¿Borrar todo?")) return;
-        document.getElementById('status').innerText = "Vaciando base...";
+        document.getElementById('status').innerText = "Vaciando...";
         const snap = await getDocs(colRef);
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        alert("Nube limpia.");
-        document.getElementById('status').innerText = "Listo.";
+        alert("Base limpia.");
     };
 
     window.cargarDatos = async () => {
         const input = document.getElementById('csv-input');
         const texto = input.value.trim();
-        if(!texto) return alert("Pega los datos del CSV");
+        if(!texto) return alert("Pega los datos.");
 
         const status = document.getElementById('status');
-        const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
+        const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
         
-        status.innerText = "Preparando envío masivo...";
+        status.innerText = "Subiendo...";
         
         try {
             let batch = writeBatch(db);
             let contador = 0;
 
-            for (let f of filas) {
+            for (let f of lineas) {
                 if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
                 
                 const c = f.split(',');
-                let ufNum = String(c || "").replace(/[^0-9]/g, '');
-                if(!ufNum) continue;
+                
+                // --- PROTECCIÓN AQUÍ: Forzamos String para evitar error de trim ---
+                let ufRaw = String(c || "").replace(/[^0-9]/g, '');
+                if(!ufRaw) continue;
 
-                const ufID = ufNum.padStart(4, '0');
-                const prop = (c || "S/D").trim();
-                const inq = (c || "").trim();
+                let ufID = ufRaw.padStart(4, '0');
+                let prop = String(c || "S/D").trim();
+                let inq = String(c || "").trim();
 
-                let cocheraFinal = ufNum;
+                let cocheraFinal = ufRaw;
                 if(inq) {
                     const partes = inq.split(' ');
                     cocheraFinal = partes[partes.length - 1];
@@ -131,27 +128,21 @@
                 const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
                 batch.set(docRef, {
                     uf: ufID,
-                    prop: inq ? `${prop} / ${inq}` : prop,
-                    cochera: cocheraFinal,
+                    prop: inq ? prop + " / " + inq : prop,
+                    cochera: String(cocheraFinal),
                     patente: ""
                 }, { merge: true });
 
                 contador++;
-
-                // Firebase permite hasta 500 operaciones por lote. 
-                // Como tenemos 278, se enviará TODO de una sola vez.
             }
 
-            status.innerText = "Subiendo datos a la nube...";
-            await batch.commit(); // ESTA ES LA MAGIA: Envía todo junto.
-            
-            alert("¡CARGA EXITOSA! " + contador + " registros actualizados.");
+            await batch.commit();
+            alert("¡ÉXITO! " + contador + " registros.");
             input.value = "";
-            status.innerText = "Sincronizado.";
+            status.innerText = "Listo.";
 
         } catch (e) {
             alert("Error: " + e.message);
-            status.innerText = "Error en la carga.";
         }
     };
 </script>

@@ -2,28 +2,29 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>SISTEMA COCHERAS - CARGA FORZADA V2</title>
+    <title>SISTEMA COCHERAS - CARGA DIRECTA</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
-        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; max-width: 450px; margin: auto; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; white-space: pre-wrap; }
-        .btn-import { background: #1d6ed7; color: white; padding: 15px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
-        .card { background: #1c272e; padding: 12px; margin-top: 10px; border-radius: 8px; text-align: left; border-left: 5px solid #1d6ed7; }
+        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; max-width: 500px; margin: auto; }
+        #csv-text { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #333; border-radius: 5px; margin-top: 10px; font-family: monospace; font-size: 10px; }
+        .btn-import { background: #25d366; color: black; padding: 15px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-top: 15px; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; }
+        .card { background: #1c272e; padding: 12px; margin-top: 10px; border-radius: 8px; text-align: left; border-left: 5px solid #25d366; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h3>PASO 1: Seleccionar Archivo</h3>
-    <input type="file" id="archivo-input">
+    <h3>IMPORTACIÓN DIRECTA</h3>
+    <p style="font-size: 12px; color: #8696a0;">Pega aquí el contenido de tu archivo CSV:</p>
+    <textarea id="csv-text" placeholder="UF,Propietario,TelProp..."></textarea>
     
-    <h3 style="margin-top:20px;">PASO 2: Confirmar Carga</h3>
-    <button class="btn-import" onclick="forzarLectura()">PROCESAR AHORA</button>
+    <button class="btn-import" onclick="procesarPegado()">SINCRONIZAR CON FIREBASE</button>
     
-    <div id="log">Estado: Esperando archivo...</div>
+    <div id="log">Estado: Esperando datos...</div>
 </div>
 
-<div id="lista" style="max-width:450px; margin: 20px auto;"></div>
+<div id="lista" style="max-width:500px; margin: 20px auto;"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -55,69 +56,62 @@
         }).join('');
     });
 
-    window.forzarLectura = function() {
-        const input = document.getElementById('archivo-input');
-        
-        // NO validamos el nombre, solo si existe el objeto en el índice 0
-        if (!input.files || !input.files) {
-            alert("Selecciona el archivo primero");
+    window.procesarPegado = async function() {
+        const texto = document.getElementById('csv-text').value;
+        if (!texto || texto.length < 10) {
+            alert("Primero pega el contenido del archivo CSV");
             return;
         }
 
-        const miArchivo = input.files;
-        window.logger("Iniciando bypass de seguridad...");
+        window.logger("Procesando datos pegados...");
 
-        const reader = new FileReader();
+        try {
+            // Separar por líneas
+            const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
+            window.logger("Filas detectadas: " + filas.length);
 
-        reader.onload = async function(e) {
-            try {
-                const texto = e.target.result;
-                if (!texto) {
-                    window.logger("ERROR: El archivo no entregó datos.");
-                    return;
+            let batch = writeBatch(db);
+            let contador = 0;
+
+            for (let i = 0; i < filas.length; i++) {
+                const fila = filas[i];
+                if (fila.toUpperCase().startsWith("UF")) continue;
+
+                const c = fila.split(',');
+                // Estructura del Respaldo: UF(0), Propietario(1), TelProp(2), Inquilino(3)
+                const ufRaw = c.replace(/[^0-9]/g, '');
+                if (!ufRaw) continue;
+
+                const ufID = ufRaw.padStart(4, '0');
+                const prop = c ? c.trim() : "S/D";
+                const inq = c ? c.trim() : "";
+                const nombreMostrar = inq ? `${prop} / ${inq}` : prop;
+
+                const ref = doc(db, "cocheras_edificio", "UF-" + ufID);
+                batch.set(ref, {
+                    uf: ufID,
+                    cochera: ufRaw,
+                    prop: nombreMostrar,
+                    patente: "",
+                    auto: ""
+                }, { merge: true });
+
+                contador++;
+
+                if (contador % 450 === 0) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                    window.logger("Guardando bloque...");
                 }
-
-                // Basado en tu archivo "Respaldo_UF (1).csv" que usa COMAS
-                const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
-                window.logger("ÉXITO: Se leyeron " + filas.length + " filas.");
-
-                let batch = writeBatch(db);
-                let contador = 0;
-
-                for (let i = 1; i < filas.length; i++) {
-                    const c = filas[i].split(',');
-                    const ufRaw = c.replace(/[^0-9]/g, '');
-                    if (!ufRaw) continue;
-
-                    const ufID = ufRaw.padStart(4, '0');
-                    const prop = c ? c.trim() : "S/D";
-                    const inq = c ? c.trim() : "";
-                    
-                    const ref = doc(db, "cocheras_edificio", "UF-" + ufID);
-                    batch.set(ref, {
-                        uf: ufID,
-                        cochera: ufRaw,
-                        prop: inq ? `${prop} / ${inq}` : prop,
-                        patente: ""
-                    }, { merge: true });
-
-                    contador++;
-                    if (contador % 400 === 0) {
-                        await batch.commit();
-                        batch = writeBatch(db);
-                    }
-                }
-
-                await batch.commit();
-                window.logger("¡CARGA FINALIZADA! " + contador + " registros.");
-
-            } catch (err) {
-                window.logger("Fallo crítico: " + err.message);
             }
-        };
 
-        // Si el archivo viene de "Gestion UF", lo leemos como texto simple
-        reader.readAsText(miArchivo);
+            await batch.commit();
+            window.logger("¡CARGA EXITOSA! " + contador + " registros sincronizados.");
+            document.getElementById('csv-text').value = ""; // Limpiar
+
+        } catch (err) {
+            window.logger("ERROR: " + err.message);
+        }
     };
 </script>
 </body>

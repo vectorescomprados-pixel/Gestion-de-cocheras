@@ -2,13 +2,14 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>SISTEMA REPARADO</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
+    <title>SISTEMA COCHERAS - FIX FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; }
-        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; margin-bottom: 20px; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; height: 150px; overflow-y: auto; border: 1px solid #333; margin-top: 10px; white-space: pre-wrap; }
-        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 5px; border-left: 5px solid #1d6ed7; }
-        input[type="file"] { background: #1d6ed7; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; }
+        .box { border: 2px solid #2a3942; padding: 15px; border-radius: 10px; background: #111b21; margin-bottom: 20px; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; border: 1px solid #333; white-space: pre-wrap; }
+        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 5px; border-left: 5px solid #f59e0b; }
+        input[type="file"] { padding: 10px; background: #1d6ed7; color: white; width: 100%; border-radius: 5px; box-sizing: border-box; }
     </style>
 </head>
 <body>
@@ -16,12 +17,11 @@
 <div class="box">
     <h3>PASO 1: Seleccionar Archivo</h3>
     <input type="file" id="csv-input" accept=".csv">
-    
-    <div id="log">Estado: Esperando archivo...</div>
+    <div id="log">Estado: Sistema listo.</div>
 </div>
 
 <div class="box">
-    <button style="background:red; color:white; padding:10px; width:100%; border:none; cursor:pointer;" id="btn-borrar">BORRAR TODO</button>
+    <button style="background:#e91e63; color:white; padding:10px; width:100%; border:none; border-radius:5px; cursor:pointer;" id="btn-borrar">BORRAR TODA LA BASE</button>
 </div>
 
 <div id="resultado"></div>
@@ -57,54 +57,72 @@
         }).join('');
     });
 
-    // Cambiamos a 'input' para máxima compatibilidad
-    document.getElementById('csv-input').addEventListener('input', function(e) {
-        const file = e.target.files;
-        if (!file) return;
-
-        logger("¡ARCHIVO DETECTADO! Nombre: " + file.name);
+    // MÉTODO DE LECTURA ULTRA-COMPATIBLE
+    document.getElementById('csv-input').onchange = function(evento) {
+        // Usamos el evento directo para evitar el 'undefined'
+        const archivo = evento.target.files;
         
-        const reader = new FileReader();
-        reader.onload = async (ev) => {
+        if (!archivo) {
+            logger("Error: No se pudo capturar el archivo.");
+            return;
+        }
+
+        logger("Archivo capturado: " + archivo.name);
+        
+        const lector = new FileReader();
+        
+        lector.onload = async function(e) {
             try {
-                const texto = ev.target.result;
-                const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
-                logger("Líneas leídas: " + lineas.length);
+                const contenido = e.target.result;
+                if (!contenido) {
+                    logger("Error: El archivo está vacío.");
+                    return;
+                }
+
+                const lineas = contenido.split(/\r?\n/).filter(l => l.trim() !== "");
+                logger("Líneas encontradas: " + lineas.length);
 
                 const batch = writeBatch(db);
                 let contador = 0;
 
                 for (let i = 1; i < lineas.length; i++) {
                     const columnas = lineas[i].split(';');
-                    if (columnas.length < 1) continue;
-
-                    const rawUF = columnas.trim();
+                    
+                    const rawUF = columnas ? columnas.trim() : "";
                     if (!rawUF || isNaN(parseInt(rawUF))) continue;
 
                     const ufNorm = rawUF.padStart(4, '0');
-                    const cochera = columnas ? columnas.trim() : rawUF;
-                    const prop = columnas ? columnas.trim() : "S/D";
-                    const inq = columnas ? columnas.trim() : "";
+                    const cochera = (columnas && columnas.trim() !== "") ? columnas.trim() : rawUF;
+                    const prop = (columnas && columnas.trim() !== "") ? columnas.trim() : "S/D";
+                    const inq = (columnas && columnas.trim() !== "") ? columnas.trim() : "";
                     const nombreFinal = inq ? prop + " / " + inq : prop;
 
                     const ref = doc(db, "cocheras_edificio", "UF-" + ufNorm);
-                    batch.set(ref, { uf: ufNorm, cochera, prop: nombreFinal, patente: "" }, { merge: true });
+                    batch.set(ref, { 
+                        uf: ufNorm, 
+                        cochera: cochera, 
+                        prop: nombreFinal, 
+                        patente: "",
+                        auto: "" 
+                    }, { merge: true });
+                    
                     contador++;
                 }
 
-                logger("Enviando " + contador + " filas a Firebase...");
+                logger("Subiendo " + contador + " filas a la nube...");
                 await batch.commit();
-                logger("¡LISTO! Datos guardados.");
+                logger("¡SINCRO EXITOSA!");
 
             } catch (err) {
-                logger("ERROR: " + err.message);
+                logger("ERROR DE PROCESAMIENTO: " + err.message);
             }
         };
-        reader.readAsText(file, "ISO-8859-1");
-    });
+
+        lector.readAsText(archivo, "ISO-8859-1");
+    };
 
     document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar?")) return;
+        if(!confirm("¿Borrar todo?")) return;
         const snap = await getDocs(colRef);
         const b = writeBatch(db);
         snap.docs.forEach(d => b.delete(d.ref));

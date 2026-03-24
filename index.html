@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GESTIÓN COCHERAS - FIX CARGA</title>
+    <title>SISTEMA COCHERAS - FIX FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
@@ -30,9 +30,9 @@
 <div id="lista"></div>
 
 <div class="admin-panel">
-    <h4 style="margin:0;">Panel de Carga</h4>
+    <h4 style="margin:0;">Panel de Administración</h4>
     <button class="btn btn-red" id="btn-borrar">1. LIMPIAR TODO (DUPLICADOS)</button>
-    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV (desde el Bloc de notas)..."></textarea>
+    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
     <button class="btn btn-green" id="btn-cargar">2. PROCESAR Y CARGAR</button>
 </div>
 
@@ -55,53 +55,47 @@
 
     let datosLocales = [];
 
-    // --- MOSTRAR LOS DATOS ---
+    // --- ESCUCHA EN TIEMPO REAL ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         datosLocales = snap.docs.map(d => d.data());
+        renderizar(datosLocales);
+    });
+
+    function renderizar(datos) {
         const listado = document.getElementById('lista');
         listado.innerHTML = ""; 
-
-        datosLocales.forEach(i => {
+        datos.forEach(i => {
             const div = document.createElement('div');
             div.className = 'card';
             div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
             listado.appendChild(div);
         });
-    });
+    }
 
     // --- BUSCADOR ---
-    document.getElementById('buscador').addEventListener('input', (e) => {
+    document.getElementById('buscador').oninput = (e) => {
         const term = e.target.value.toLowerCase();
         const filtrados = datosLocales.filter(i => i.uf.includes(term) || i.prop.toLowerCase().includes(term));
-        const listado = document.getElementById('lista');
-        listado.innerHTML = "";
-        filtrados.forEach(i => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
-            listado.appendChild(div);
-        });
-    });
-
-    // --- BOTÓN BORRAR ---
-    document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar todos los datos actuales?")) return;
-        try {
-            const snap = await getDocs(colRef);
-            const batch = writeBatch(db);
-            snap.docs.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            alert("Base de datos vaciada con éxito.");
-        } catch (e) { alert("Error: " + e.message); }
+        renderizar(filtrados);
     };
 
-    // --- BOTÓN CARGAR (FIX) ---
+    // --- BORRAR ---
+    document.getElementById('btn-borrar').onclick = async () => {
+        if(!confirm("¿Vaciar base de datos?")) return;
+        const snap = await getDocs(colRef);
+        const batch = writeBatch(db);
+        snap.docs.forEach(d => batch.delete(d.ref));
+        await batch.commit();
+        alert("Base limpia.");
+    };
+
+    // --- CARGAR (VERSION BLINDADA) ---
     document.getElementById('btn-cargar').onclick = async () => {
         const texto = document.getElementById('csv-input').value.trim();
-        if(!texto) return alert("Pega el contenido del CSV primero.");
+        if(!texto) return alert("Pega los datos.");
 
         const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
-        alert("Se detectaron " + filas.length + " filas. Iniciando subida...");
+        alert("Detectadas " + filas.length + " filas. Procesando...");
 
         try {
             let batch = writeBatch(db);
@@ -111,14 +105,18 @@
                 if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
 
                 const c = f.split(',');
-                const ufNumerica = c.replace(/[^0-9]/g, '');
+                
+                // --- CAMBIO CLAVE: Validación de existencia antes de usar replace ---
+                let columnaUF = c ? String(c) : ""; 
+                let ufNumerica = columnaUF.replace(/[^0-9]/g, '');
+                
                 if(!ufNumerica) continue;
 
                 const ufID = ufNumerica.padStart(4, '0');
-                const prop = (c || "S/D").trim();
-                const inq = (c || "").trim();
+                const prop = (c ? String(c) : "S/D").trim();
+                const inq = (c ? String(c) : "").trim();
 
-                // Extraemos la cochera (última parte del campo inquilino)
+                // Extraer cochera
                 let cocheraFinal = ufNumerica;
                 if(inq) {
                     const partes = inq.split(' ');
@@ -141,10 +139,10 @@
             }
 
             await batch.commit();
-            alert("¡PROCESO FINALIZADO! Se cargaron " + contador + " registros.");
+            alert("¡ÉXITO! " + contador + " cargados.");
             document.getElementById('csv-input').value = "";
         } catch (e) {
-            alert("Error durante la carga: " + e.message);
+            alert("Error crítico: " + e.message);
         }
     };
 </script>

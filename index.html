@@ -3,28 +3,29 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA COCHERAS - FIX FINAL</title>
+    <title>SISTEMA COCHERAS - SOLUCIÓN FORZADA</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; }
-        .box { border: 2px solid #2a3942; padding: 15px; border-radius: 10px; background: #111b21; margin-bottom: 20px; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; border: 1px solid #333; white-space: pre-wrap; }
-        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 5px; border-left: 5px solid #f59e0b; }
-        input[type="file"] { padding: 10px; background: #1d6ed7; color: white; width: 100%; border-radius: 5px; box-sizing: border-box; }
+        body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; }
+        .box { border: 1px solid #2a3942; padding: 15px; border-radius: 10px; background: #111b21; margin-bottom: 15px; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 120px; overflow-y: auto; border: 1px solid #333; }
+        .card { background: #1c272e; padding: 12px; margin-top: 8px; border-radius: 8px; border-left: 5px solid #1d6ed7; }
+        .input-file { background: #1d6ed7; color: white; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; cursor: pointer; border: none; font-weight: bold; }
+        .btn-borrar { background: #444; color: #ccc; padding: 8px; width: 100%; border: none; margin-top: 10px; border-radius: 5px; font-size: 11px; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h3>PASO 1: Seleccionar Archivo</h3>
-    <input type="file" id="csv-input" accept=".csv">
-    <div id="log">Estado: Sistema listo.</div>
+    <label style="display:block; margin-bottom:10px; color:#8696a0;">SELECCIONE EL ARCHIVO CSV:</label>
+    <input type="file" id="archivo-real" class="input-file">
+    <div id="log">Estado: Esperando...</div>
 </div>
+
+<div id="lista"></div>
 
 <div class="box">
-    <button style="background:#e91e63; color:white; padding:10px; width:100%; border:none; border-radius:5px; cursor:pointer;" id="btn-borrar">BORRAR TODA LA BASE</button>
+    <button class="btn-borrar" id="btn-borrar">LIMPIAR BASE DE DATOS</button>
 </div>
-
-<div id="resultado"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -43,86 +44,82 @@
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
 
-    const logger = (msg) => {
+    const logger = (m) => {
         const l = document.getElementById('log');
-        l.innerText += "\n> " + msg;
+        l.innerText += "\n> " + m;
         l.scrollTop = l.scrollHeight;
     };
 
+    // Ver datos
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        const res = document.getElementById('resultado');
-        res.innerHTML = snap.docs.map(d => {
+        document.getElementById('lista').innerHTML = snap.docs.map(d => {
             const i = d.data();
-            return `<div class="card">UF: ${i.uf} | Cochera: ${i.cochera}<br>Prop: ${i.prop}</div>`;
+            return `<div class="card"><b>UF ${i.uf}</b> (Cochera ${i.cochera})<br>${i.prop}</div>`;
         }).join('');
     });
 
-    // MÉTODO DE LECTURA ULTRA-COMPATIBLE
-    document.getElementById('csv-input').onchange = function(evento) {
-        // Usamos el evento directo para evitar el 'undefined'
-        const archivo = evento.target.files;
-        
-        if (!archivo) {
-            logger("Error: No se pudo capturar el archivo.");
+    // PROCESAMIENTO ULTRA-SIMPLE
+    const input = document.getElementById('archivo-real');
+    
+    input.addEventListener('change', function() {
+        // En lugar de acceder a file.name, probamos si el objeto existe
+        if (!this.files || this.files.length === 0) {
+            logger("Error: El navegador no entregó el archivo.");
             return;
         }
 
-        logger("Archivo capturado: " + archivo.name);
-        
+        const miArchivo = this.files;
+        logger("Archivo recibido correctamente.");
+
         const lector = new FileReader();
         
-        lector.onload = async function(e) {
-            try {
-                const contenido = e.target.result;
-                if (!contenido) {
-                    logger("Error: El archivo está vacío.");
-                    return;
-                }
-
-                const lineas = contenido.split(/\r?\n/).filter(l => l.trim() !== "");
-                logger("Líneas encontradas: " + lineas.length);
-
-                const batch = writeBatch(db);
-                let contador = 0;
-
-                for (let i = 1; i < lineas.length; i++) {
-                    const columnas = lineas[i].split(';');
-                    
-                    const rawUF = columnas ? columnas.trim() : "";
-                    if (!rawUF || isNaN(parseInt(rawUF))) continue;
-
-                    const ufNorm = rawUF.padStart(4, '0');
-                    const cochera = (columnas && columnas.trim() !== "") ? columnas.trim() : rawUF;
-                    const prop = (columnas && columnas.trim() !== "") ? columnas.trim() : "S/D";
-                    const inq = (columnas && columnas.trim() !== "") ? columnas.trim() : "";
-                    const nombreFinal = inq ? prop + " / " + inq : prop;
-
-                    const ref = doc(db, "cocheras_edificio", "UF-" + ufNorm);
-                    batch.set(ref, { 
-                        uf: ufNorm, 
-                        cochera: cochera, 
-                        prop: nombreFinal, 
-                        patente: "",
-                        auto: "" 
-                    }, { merge: true });
-                    
-                    contador++;
-                }
-
-                logger("Subiendo " + contador + " filas a la nube...");
-                await batch.commit();
-                logger("¡SINCRO EXITOSA!");
-
-            } catch (err) {
-                logger("ERROR DE PROCESAMIENTO: " + err.message);
+        lector.onload = async (e) => {
+            const contenido = e.target.result;
+            if (!contenido) {
+                logger("Error: El contenido está vacío.");
+                return;
             }
+
+            const filas = contenido.split(/\r?\n/).filter(f => f.trim().length > 0);
+            logger("Líneas leídas: " + filas.length);
+
+            const batch = writeBatch(db);
+            let count = 0;
+
+            for (let i = 1; i < filas.length; i++) {
+                const columnas = filas[i].split(';');
+                
+                // Si la columna 0 (UF) no existe, saltamos
+                if (!columnas) continue;
+                
+                const ufLimpia = columnas.trim().replace(/"/g, '');
+                if (isNaN(parseInt(ufLimpia))) continue;
+
+                const ufID = ufLimpia.padStart(4, '0');
+                const coch = (columnas && columnas.trim() !== "") ? columnas.trim() : ufLimpia;
+                const p = (columnas && columnas.trim() !== "") ? columnas.trim() : "S/D";
+                const inq = (columnas && columnas.trim() !== "") ? columnas.trim() : "";
+                
+                const ref = doc(db, "cocheras_edificio", "UF-" + ufID);
+                batch.set(ref, {
+                    uf: ufID,
+                    cochera: coch,
+                    prop: inq ? p + " / " + inq : p,
+                    patente: ""
+                }, { merge: true });
+
+                count++;
+            }
+
+            logger("Enviando " + count + " registros...");
+            await batch.commit();
+            logger("¡FINALIZADO!");
         };
 
-        lector.readAsText(archivo, "ISO-8859-1");
-    };
+        lector.readAsText(miArchivo, "ISO-8859-1");
+    });
 
     document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar todo?")) return;
         const snap = await getDocs(colRef);
         const b = writeBatch(db);
         snap.docs.forEach(d => b.delete(d.ref));

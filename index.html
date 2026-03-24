@@ -3,26 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GESTIÓN COCHERAS - SISTEMA LIMPIO</title>
+    <title>GESTIÓN COCHERAS - FIX CARGA</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
         .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; }
-        
-        /* Contenedor de lista */
         #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; }
+        .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
+        .nombre { font-size: 1.1em; margin: 5px 0; color: #e9edef; }
         
-        /* Tarjeta */
-        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; text-transform: uppercase; }
-        .nombre { font-size: 1.2em; font-weight: 500; margin: 5px 0; color: #e9edef; }
-        .info-extra { color: #8696a0; font-size: 0.9em; }
-        .cochera-badge { background: #202c33; color: #00a884; padding: 2px 8px; border-radius: 4px; font-weight: bold; }
-
-        /* Panel de Control (Abajo) */
-        .admin-panel { margin-top: 50px; padding: 20px; border: 1px dashed #333; border-radius: 10px; }
-        textarea { width: 100%; height: 80px; background: #000; color: #0f0; border: 1px solid #333; font-family: monospace; margin-top: 10px; }
-        .btn { padding: 12px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .admin-panel { margin-top: 40px; padding: 15px; border: 1px solid #333; border-radius: 10px; background: #161d22; }
+        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; font-family: monospace; padding: 10px; box-sizing: border-box; }
+        .btn { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 14px; }
         .btn-red { background: #e91e63; color: white; }
         .btn-green { background: #00a884; color: white; }
     </style>
@@ -30,25 +23,22 @@
 <body>
 
 <div class="header">
-    <h3 style="margin:0 0 10px 0;">Cocheras Edificio</h3>
+    <h3 style="margin:0;">Cocheras Edificio</h3>
     <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF o Nombre...">
 </div>
 
-<div id="lista">
-    <p style="text-align:center; color:#8696a0;">Cargando registros...</p>
-</div>
+<div id="lista"></div>
 
 <div class="admin-panel">
-    <h4 style="margin:0;">Panel de Administración</h4>
-    <button class="btn btn-red" onclick="borrarBaseCompleta()">1. BORRAR TODA LA BASE (Limpiar duplicados)</button>
-    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
-    <button class="btn btn-green" onclick="importarDatos()">2. CARGAR DATOS NUEVOS</button>
-    <div id="log" style="font-size:10px; color:#0f0; margin-top:10px;"></div>
+    <h4 style="margin:0;">Panel de Carga</h4>
+    <button class="btn btn-red" id="btn-borrar">1. LIMPIAR TODO (DUPLICADOS)</button>
+    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV (desde el Bloc de notas)..."></textarea>
+    <button class="btn btn-green" id="btn-cargar">2. PROCESAR Y CARGAR</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -65,87 +55,97 @@
 
     let datosLocales = [];
 
-    // --- ESCUCHAR LA BASE ---
+    // --- MOSTRAR LOS DATOS ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        datosLocales = snap.docs.map(d => ({id: d.id, ...d.data()}));
-        dibujarLista(datosLocales);
-    });
-
-    function dibujarLista(datos) {
+        datosLocales = snap.docs.map(d => d.data());
         const listado = document.getElementById('lista');
-        listado.innerHTML = ""; // LIMPIEZA TOTAL antes de dibujar
+        listado.innerHTML = ""; 
 
-        if (datos.length === 0) {
-            listado.innerHTML = "<p style='color:#8696a0; text-align:center;'>No hay datos. Use el panel de abajo.</p>";
-            return;
-        }
-
-        datos.forEach(i => {
+        datosLocales.forEach(i => {
             const div = document.createElement('div');
             div.className = 'card';
-            div.innerHTML = `
-                <div class="uf-tag">Unidad Funcional ${i.uf}</div>
-                <div class="nombre">${i.prop}</div>
-                <div class="info-extra">
-                    Cochera: <span class="cochera-badge">${i.cochera || 'S/D'}</span>
-                </div>
-            `;
+            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
             listado.appendChild(div);
         });
-    }
+    });
 
     // --- BUSCADOR ---
-    document.getElementById('buscador').oninput = (e) => {
+    document.getElementById('buscador').addEventListener('input', (e) => {
         const term = e.target.value.toLowerCase();
         const filtrados = datosLocales.filter(i => i.uf.includes(term) || i.prop.toLowerCase().includes(term));
-        dibujarLista(filtrados);
-    };
-
-    // --- ACCIONES DE ADMIN ---
-    window.borrarBaseCompleta = async () => {
-        if(!confirm("¿Eliminar todos los registros? Esto quitará los duplicados.")) return;
-        const snap = await getDocs(colRef);
-        const batch = writeBatch(db);
-        snap.docs.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-        alert("Base de datos limpia.");
-    };
-
-    window.importarDatos = async () => {
-        const texto = document.getElementById('csv-input').value;
-        if(!texto) return alert("Pega el contenido del CSV");
-
-        const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
-        let batch = writeBatch(db);
-        let cont = 0;
-
-        lineas.forEach((linea, index) => {
-            if (linea.toUpperCase().includes("UF,PROPIETARIO")) return;
-
-            const c = linea.split(',');
-            const ufNum = c.replace(/[^0-9]/g, '').padStart(4, '0');
-            if(!ufNum || ufNum === "0000") return;
-
-            const prop = (c || "").trim();
-            const inq = (c || "").trim();
-            
-            // LÓGICA DE COCHERA: Intentamos sacarla del campo Inquilino si existe
-            // Si el inquilino dice "Jose Mora 13b", intentamos mostrarlo
-            const cochera = inq.split(' ').pop(); // Toma la última palabra (ej: 13b)
-
-            const ref = doc(db, "cocheras_edificio", "UF-" + ufNum);
-            batch.set(ref, {
-                uf: ufNum,
-                prop: inq ? `${prop} / ${inq}` : prop,
-                cochera: cochera || ufNum, // Si no detecta nada, pone la UF
-                patente: ""
-            }, { merge: true });
-            cont++;
+        const listado = document.getElementById('lista');
+        listado.innerHTML = "";
+        filtrados.forEach(i => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
+            listado.appendChild(div);
         });
+    });
 
-        await batch.commit();
-        document.getElementById('csv-input').value = "";
-        alert("Cargados " + cont + " registros.");
+    // --- BOTÓN BORRAR ---
+    document.getElementById('btn-borrar').onclick = async () => {
+        if(!confirm("¿Borrar todos los datos actuales?")) return;
+        try {
+            const snap = await getDocs(colRef);
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            alert("Base de datos vaciada con éxito.");
+        } catch (e) { alert("Error: " + e.message); }
+    };
+
+    // --- BOTÓN CARGAR (FIX) ---
+    document.getElementById('btn-cargar').onclick = async () => {
+        const texto = document.getElementById('csv-input').value.trim();
+        if(!texto) return alert("Pega el contenido del CSV primero.");
+
+        const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
+        alert("Se detectaron " + filas.length + " filas. Iniciando subida...");
+
+        try {
+            let batch = writeBatch(db);
+            let contador = 0;
+
+            for (let f of filas) {
+                if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
+
+                const c = f.split(',');
+                const ufNumerica = c.replace(/[^0-9]/g, '');
+                if(!ufNumerica) continue;
+
+                const ufID = ufNumerica.padStart(4, '0');
+                const prop = (c || "S/D").trim();
+                const inq = (c || "").trim();
+
+                // Extraemos la cochera (última parte del campo inquilino)
+                let cocheraFinal = ufNumerica;
+                if(inq) {
+                    const partes = inq.split(' ');
+                    cocheraFinal = partes[partes.length - 1];
+                }
+
+                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
+                batch.set(docRef, {
+                    uf: ufID,
+                    prop: inq ? `${prop} / ${inq}` : prop,
+                    cochera: cocheraFinal,
+                    patente: ""
+                }, { merge: true });
+
+                contador++;
+                if (contador % 400 === 0) {
+                    await batch.commit();
+                    batch = writeBatch(db);
+                }
+            }
+
+            await batch.commit();
+            alert("¡PROCESO FINALIZADO! Se cargaron " + contador + " registros.");
+            document.getElementById('csv-input').value = "";
+        } catch (e) {
+            alert("Error durante la carga: " + e.message);
+        }
     };
 </script>
 </body>

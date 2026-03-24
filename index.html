@@ -3,43 +3,35 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA COCHERAS PRO</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>DIAGNÓSTICO COCHERAS</title>
     <style>
-        :root { --bg: #0b141a; --panel: #111b21; --card: #1c272e; --border: #2a3942; --text: #e9edef; --blue: #1d6ed7; --yellow: #f59e0b; --red: #e91e63; }
-        body { margin: 0; background: var(--bg); font-family: sans-serif; color: var(--text); padding: 10px; }
-        .panel { background: var(--panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
-        .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-        .btn { height: 45px; border-radius: 8px; border: none; font-size: 10px; font-weight: bold; text-transform: uppercase; cursor: pointer; color: #fff; }
-        .btn-yellow { background: var(--yellow); color: #000; }
-        .btn-red { background: var(--red); }
-        .btn-grey { background: #4b5563; }
-        input { width: 100%; padding: 14px; margin-top: 10px; background: #1a242b; border: 1px solid var(--border); color: #fff; border-radius: 8px; box-sizing: border-box; font-size: 16px; outline: none; }
-        .card { background: #111b21; border-radius: 10px; border: 1px solid var(--border); padding: 12px; margin-bottom: 8px; border-left: 5px solid var(--blue); }
-        .card-header { display: flex; justify-content: space-between; align-items: center; }
-        .uf-num { font-size: 18px; font-weight: bold; color: var(--blue); }
-        .coch-num { background: var(--blue); color: #fff; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
-        .prop-name { font-size: 14px; color: #fff; margin: 8px 0; }
-        .patente-view { margin-top: 8px; font-family: monospace; color: var(--yellow); font-size: 15px; border-top: 1px solid #2a3942; padding-top: 8px; }
+        body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; }
+        .box { border: 1px solid #2a3942; padding: 15px; border-radius: 10px; margin-bottom: 20px; background: #111b21; }
+        button { width: 100%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-blue { background: #1d6ed7; color: white; }
+        .btn-red { background: #e91e63; color: white; }
+        #log { background: black; color: #00ff00; padding: 10px; font-family: monospace; font-size: 12px; height: 150px; overflow-y: scroll; border: 1px solid #333; }
+        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 5px; border-left: 4px solid #f59e0b; }
     </style>
 </head>
 <body>
 
-<div class="panel">
-    <div class="row">
-        <button class="btn btn-yellow" onclick="document.getElementById('csv-file').click()">SUBIR CSV</button>
-        <button class="btn btn-red" id="btn-borrar">BORRAR</button>
-        <button class="btn btn-grey" onclick="location.reload()">RECARGAR</button>
-    </div>
-    <input type="file" id="csv-file" accept=".csv" style="display:none">
-    <input type="text" id="buscador" placeholder="Buscar UF, Cochera o Nombre...">
+<div class="box">
+    <h3>Consola de Estado</h3>
+    <div id="log">Esperando acción...</div>
 </div>
 
-<div id="lista"></div>
+<div class="box">
+    <button class="btn-red" id="btn-borrar">1. BORRAR TODA LA BASE</button>
+    <button class="btn-blue" onclick="document.getElementById('csv-input').click()">2. SUBIR PRUEBA.CSV</button>
+    <input type="file" id="csv-input" accept=".csv" style="display:none">
+</div>
+
+<div id="resultado"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDocs, writeBatch, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -53,102 +45,74 @@
     const app = initializeApp(config);
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
-    let baseLocal = [];
 
+    const logger = (msg) => {
+        const l = document.getElementById('log');
+        l.innerHTML += `<br>> ${msg}`;
+        l.scrollTop = l.scrollHeight;
+    };
+
+    // Escuchar cambios
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        baseLocal = snap.docs.map(d => d.data());
-        dibujar(baseLocal);
+        logger(`Firebase actualizado: ${snap.size} documentos encontrados.`);
+        const res = document.getElementById('resultado');
+        res.innerHTML = snap.docs.map(d => {
+            const i = d.data();
+            return `<div class="card">UF: ${i.uf} | Cochera: ${i.cochera}<br>Prop: ${i.prop}</div>`;
+        }).join('');
     });
 
-    function dibujar(datos) {
-        const contenedor = document.getElementById('lista');
-        if (datos.length === 0) {
-            contenedor.innerHTML = '<p style="text-align:center; color:#8696a0; padding:20px;">Base vacía. Cargue el archivo CSV.</p>';
-            return;
-        }
-        contenedor.innerHTML = datos.map(i => `
-            <div class="card">
-                <div class="card-header">
-                    <span class="uf-num">UF ${i.uf}</span>
-                    <span class="coch-num">COCHERA ${i.cochera || 'S/N'}</span>
-                </div>
-                <div class="prop-name">${i.prop || 'S/D'}</div>
-                <div class="patente-view"><i class="fas fa-car"></i> ${i.patente || 'SIN PATENTE'}</div>
-            </div>
-        `).join('');
-    }
+    // Borrar
+    document.getElementById('btn-borrar').onclick = async () => {
+        logger("Iniciando borrado...");
+        try {
+            const snap = await getDocs(colRef);
+            const batch = writeBatch(db);
+            snap.docs.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            logger("Base de datos borrada con éxito.");
+        } catch (e) { logger("ERROR AL BORRAR: " + e.message); }
+    };
 
-    document.getElementById('csv-file').onchange = (e) => {
+    // Leer CSV
+    document.getElementById('csv-input').onchange = (e) => {
         const file = e.target.files;
-        if(!file) return;
+        if (!file) return;
+        logger(`Archivo seleccionado: ${file.name}`);
 
         const reader = new FileReader();
         reader.onload = async (ev) => {
-            const contenido = ev.target.result;
-            const lineas = contenido.split(/\r?\n/).filter(l => l.trim().length > 0);
-            
-            alert("Archivo detectado: " + lineas.length + " filas encontradas. Iniciando carga...");
+            try {
+                const texto = ev.target.result;
+                const lineas = texto.split(/\r?\n/).filter(l => l.trim());
+                logger(`Lineas leídas: ${lineas.length}`);
 
-            let batch = writeBatch(db);
-            let total = 0;
+                const batch = writeBatch(db);
+                let contador = 0;
 
-            for(let i = 1; i < lineas.length; i++) {
-                // Detectamos si usa ; o ,
-                let separador = lineas[i].includes(';') ? ';' : ',';
-                const columnas = lineas[i].split(separador);
-                
-                let ufRaw = columnas?.trim().replace(/"/g, "");
-                if(!ufRaw || isNaN(parseInt(ufRaw))) continue;
+                for (let i = 1; i < lineas.length; i++) {
+                    const columnas = lineas[i].split(';');
+                    if (columnas.length < 2) continue;
 
-                const ufID = ufRaw.padStart(4, '0');
-                
-                // Mapeo dinámico según tu nueva estructura
-                const nCochera = columnas?.trim().replace(/"/g, "") || ufRaw;
-                const prop = columnas?.trim().replace(/"/g, "") || "";
-                const inq = columnas?.trim().replace(/"/g, "") || "";
-                const nombreFull = inq ? `${prop} / ${inq}` : prop;
-
-                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                batch.set(docRef, {
-                    uf: ufID,
-                    cochera: nCochera,
-                    prop: nombreFull,
-                    patente: "",
-                    auto: ""
-                }, { merge: true });
-
-                total++;
-                if(total % 400 === 0) { 
-                    await batch.commit(); 
-                    batch = writeBatch(db); 
+                    const uf = columnas.trim().padStart(4, '0');
+                    const cochera = columnas.trim() || uf;
+                    const prop = columnas?.trim() || "S/D";
+                    
+                    const ref = doc(db, "cocheras_edificio", "UF-" + uf);
+                    batch.set(ref, { uf, cochera, prop, patente: "" }, { merge: true });
+                    contador++;
                 }
+
+                logger(`Enviando ${contador} registros a Firebase...`);
+                await batch.commit();
+                logger("¡Sincronización completada con éxito!");
+            } catch (err) {
+                logger("ERROR EN PROCESO: " + err.message);
+                console.error(err);
             }
-
-            await batch.commit();
-            alert("¡Éxito! Se cargaron " + total + " registros.");
         };
+        reader.onerror = () => logger("Error al leer el archivo físico.");
         reader.readAsText(file, "ISO-8859-1");
-    };
-
-    document.getElementById('buscador').oninput = (e) => {
-        const b = e.target.value.toLowerCase();
-        let ufNorm = b; if(b && !isNaN(b)) ufNorm = b.padStart(4, '0');
-
-        const filtrados = baseLocal.filter(i => 
-            i.uf.includes(ufNorm) || 
-            (i.cochera && i.cochera.toLowerCase().includes(b)) ||
-            (i.prop && i.prop.toLowerCase().includes(b))
-        );
-        dibujar(filtrados);
-    };
-
-    document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar todo?")) return;
-        const snap = await getDocs(colRef);
-        const b = writeBatch(db);
-        snap.docs.forEach(d => b.delete(d.ref));
-        await b.commit();
-        alert("Base borrada");
     };
 </script>
 </body>

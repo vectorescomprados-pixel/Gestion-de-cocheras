@@ -3,19 +3,18 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - FIX FINAL</title>
+    <title>SISTEMA COCHERAS - SIN DUPLICADOS</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
         .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; }
-        #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 12px; }
-        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; }
+        #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; position: relative; }
         .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
         .nombre { font-size: 1.1em; margin: 5px 0; color: #e9edef; }
-        
         .admin-panel { margin-top: 40px; padding: 15px; border: 1px solid #333; border-radius: 10px; background: #161d22; }
         textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; font-family: monospace; padding: 10px; box-sizing: border-box; }
-        .btn { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 14px; }
+        .btn { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         .btn-red { background: #e91e63; color: white; }
         .btn-green { background: #00a884; color: white; }
     </style>
@@ -24,21 +23,21 @@
 
 <div class="header">
     <h3 style="margin:0;">Cocheras Edificio</h3>
-    <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF o Nombre...">
+    <input type="text" id="buscador" class="search-box" placeholder="Buscar UF o Nombre...">
 </div>
 
 <div id="lista"></div>
 
 <div class="admin-panel">
-    <h4 style="margin:0;">Panel de Administración</h4>
-    <button class="btn btn-red" id="btn-borrar">1. LIMPIAR TODO (DUPLICADOS)</button>
+    <h4 style="margin:0;">Panel de Control</h4>
+    <button class="btn btn-red" id="btn-borrar">BORRAR TODO (LIMPIEZA INICIAL)</button>
     <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
-    <button class="btn btn-green" id="btn-cargar">2. PROCESAR Y CARGAR</button>
+    <button class="btn btn-green" id="btn-cargar">CARGAR / ACTUALIZAR DATOS</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -55,95 +54,95 @@
 
     let datosLocales = [];
 
-    // --- ESCUCHA EN TIEMPO REAL ---
+    // --- RENDERIZADO ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        datosLocales = snap.docs.map(d => d.data());
-        renderizar(datosLocales);
-    });
-
-    function renderizar(datos) {
         const listado = document.getElementById('lista');
         listado.innerHTML = ""; 
-        datos.forEach(i => {
+        datosLocales = [];
+
+        snap.forEach(doc => {
+            const i = doc.data();
+            datosLocales.push(i);
             const div = document.createElement('div');
             div.className = 'card';
-            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
+            div.innerHTML = `
+                <div class="uf-tag">UF ${i.uf}</div>
+                <div class="nombre">${i.prop}</div>
+                <div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>
+            `;
             listado.appendChild(div);
         });
-    }
+    });
 
     // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
         const term = e.target.value.toLowerCase();
         const filtrados = datosLocales.filter(i => i.uf.includes(term) || i.prop.toLowerCase().includes(term));
-        renderizar(filtrados);
+        const listado = document.getElementById('lista');
+        listado.innerHTML = "";
+        filtrados.forEach(i => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
+            listado.appendChild(div);
+        });
     };
 
-    // --- BORRAR ---
+    // --- BORRADO FÍSICO ---
     document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Vaciar base de datos?")) return;
+        if(!confirm("¿Borrar todo?")) return;
         const snap = await getDocs(colRef);
         const batch = writeBatch(db);
-        snap.docs.forEach(d => batch.delete(d.ref));
+        snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        alert("Base limpia.");
+        alert("Base de datos vaciada.");
     };
 
-    // --- CARGAR (VERSION BLINDADA) ---
+    // --- CARGA INTELIGENTE ---
     document.getElementById('btn-cargar').onclick = async () => {
         const texto = document.getElementById('csv-input').value.trim();
-        if(!texto) return alert("Pega los datos.");
+        if(!texto) return;
 
         const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
-        alert("Detectadas " + filas.length + " filas. Procesando...");
+        let batch = writeBatch(db);
+        let contador = 0;
 
-        try {
-            let batch = writeBatch(db);
-            let contador = 0;
+        for (let f of filas) {
+            if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
+            const c = f.split(',');
+            
+            // Limpiamos la UF de cualquier espacio o caracter extraño
+            let ufLimpia = String(c || "").replace(/[^0-9]/g, '');
+            if(!ufLimpia) continue;
 
-            for (let f of filas) {
-                if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
+            const ufID = ufLimpia.padStart(4, '0'); // Formato "0001"
+            const prop = (c || "S/D").trim();
+            const inq = (c || "").trim();
 
-                const c = f.split(',');
-                
-                // --- CAMBIO CLAVE: Validación de existencia antes de usar replace ---
-                let columnaUF = c ? String(c) : ""; 
-                let ufNumerica = columnaUF.replace(/[^0-9]/g, '');
-                
-                if(!ufNumerica) continue;
-
-                const ufID = ufNumerica.padStart(4, '0');
-                const prop = (c ? String(c) : "S/D").trim();
-                const inq = (c ? String(c) : "").trim();
-
-                // Extraer cochera
-                let cocheraFinal = ufNumerica;
-                if(inq) {
-                    const partes = inq.split(' ');
-                    cocheraFinal = partes[partes.length - 1];
-                }
-
-                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                batch.set(docRef, {
-                    uf: ufID,
-                    prop: inq ? `${prop} / ${inq}` : prop,
-                    cochera: cocheraFinal,
-                    patente: ""
-                }, { merge: true });
-
-                contador++;
-                if (contador % 400 === 0) {
-                    await batch.commit();
-                    batch = writeBatch(db);
-                }
+            let cocheraFinal = ufLimpia;
+            if(inq) {
+                const partes = inq.split(' ');
+                cocheraFinal = partes[partes.length - 1];
             }
 
-            await batch.commit();
-            alert("¡ÉXITO! " + contador + " cargados.");
-            document.getElementById('csv-input').value = "";
-        } catch (e) {
-            alert("Error crítico: " + e.message);
+            // IMPORTANTE: El ID del documento es "UF-" + ufID (ej: UF-0001)
+            // Si ya existe uno con ese ID, Firebase lo REEMPLAZA en lugar de duplicar
+            const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
+            
+            batch.set(docRef, {
+                uf: ufID,
+                prop: inq ? `${prop} / ${inq}` : prop,
+                cochera: cocheraFinal,
+                patente: ""
+            }, { merge: true });
+
+            contador++;
+            if (contador % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
         }
+
+        await batch.commit();
+        alert("¡Carga finalizada! Registros procesados: " + contador);
+        document.getElementById('csv-input').value = "";
     };
 </script>
 </body>

@@ -19,7 +19,7 @@
         .btn { height: 48px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
 
-        .progress-container { width: 100%; height: 10px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
+        .progress-container { width: 100%; height: 12px; background: #000; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; border: 1px solid var(--yellow); }
         #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
 
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
@@ -68,7 +68,7 @@
 </div>
 
 <div id="lista-cocheras">
-    <div style="text-align:center; padding:40px; color:#8696a0;">Esperando carga de base de datos...</div>
+    <div style="text-align:center; padding:40px; color:#8696a0;">Cargando sistema...</div>
 </div>
 
 <div id="modal-form" class="modal">
@@ -107,8 +107,13 @@
     let todasLasCocheras = [];
     let currentDocId = null;
 
+    // --- ESCUCHA DE DATOS ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
+        // Solo traemos documentos que realmente tengan el campo 'uf'
+        todasLasCocheras = snap.docs
+            .map(d => ({id: d.id, ...d.data()}))
+            .filter(item => item.uf !== undefined);
+            
         actualizarEstadisticas();
         renderizar(todasLasCocheras);
     });
@@ -122,7 +127,7 @@
     function renderizar(lista) {
         const cont = document.getElementById('lista-cocheras');
         if (lista.length === 0) {
-            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;">No hay registros cargados. Use el botón "SUBIR BASE".</div>';
+            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;"><i class="fas fa-database" style="font-size:30px;margin-bottom:10px"></i><br>BASE VACÍA.<br>Presione "SUBIR BASE" y elija el CSV.</div>';
             return;
         }
         cont.innerHTML = '';
@@ -134,7 +139,7 @@
                 <div class="card-header">
                     <div class="card-info">
                         <div class="card-title">UF ${c.uf}</div>
-                        <div style="font-size:14px; color:#fff">${c.prop || 'SIN NOMBRE'}</div>
+                        <div style="font-size:14px; color:#fff">${c.prop || '---'}</div>
                     </div>
                     <div class="card-actions">
                         <i class="far fa-eye btn-view" data-id="${c.id}"></i>
@@ -142,16 +147,16 @@
                     </div>
                 </div>
                 <div class="card-detail" id="detail-${c.id}">
-                    <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || '---'}</b></div>
-                    <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
-                    <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
-                    <div class="detail-item">OBSERVACIONES: <b>${c.obs || '---'}</b></div>
+                    <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || 'NO ASIGNADA'}</b></div>
+                    <div class="detail-item">PATENTE: <b>${c.patente || 'SIN CARGAR'}</b></div>
+                    <div class="detail-item">VEHÍCULO: <b>${c.auto || 'SIN CARGAR'}</b></div>
+                    <div class="detail-item">OBSERVACIONES: <b>${c.obs || 'Sin notas'}</b></div>
                 </div>`;
             cont.appendChild(card);
         });
     }
 
-    // --- EVENTOS DE UI ---
+    // --- ACCIONES DE EDICIÓN ---
     document.addEventListener('click', (e) => {
         if(e.target.classList.contains('btn-view')) {
             const id = e.target.getAttribute('data-id');
@@ -176,6 +181,8 @@
     
     document.getElementById('btn-save').onclick = async () => {
         if(!currentDocId) return;
+        const btn = document.getElementById('btn-save');
+        btn.innerText = "GUARDANDO...";
         await setDoc(doc(db, "cocheras_edificio", currentDocId), {
             prop: document.getElementById('f-prop').value,
             id_cochera: document.getElementById('f-id').value,
@@ -183,10 +190,11 @@
             auto: document.getElementById('f-auto').value,
             obs: document.getElementById('f-obs').value
         }, { merge: true });
+        btn.innerText = "GUARDAR";
         document.getElementById('modal-form').style.display = 'none';
     };
 
-    // --- IMPORTADOR CSV CORREGIDO PARA Respaldo1_UF.csv ---
+    // --- IMPORTADOR CSV REPARADO ---
     document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
     document.getElementById('csv-file').onchange = (ev) => {
         const file = ev.target.files;
@@ -195,45 +203,49 @@
         const reader = new FileReader();
         reader.onload = async (e) => {
             const content = e.target.result;
-            // Divide por líneas y limpia espacios
+            // Maneja saltos de línea de Windows (\r\n) y Unix (\n)
             const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
+            
             const bar = document.getElementById('progress-bar');
             const pCont = document.getElementById('p-container');
-            
             pCont.style.display = 'block';
-            bar.style.width = '0%';
+            bar.style.width = '2%'; // Inicio visual inmediato
 
             for(let i=0; i < lines.length; i++) {
-                // Regex avanzado para capturar campos con comas dentro de comillas
-                const pattern = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
-                const cols = lines[i].match(pattern);
+                // Regex para ignorar comas dentro de comillas (como en "Fernandez, Sebastian")
+                const cols = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 
-                if (!cols || cols.length < 2) continue;
+                if (cols.length < 2) continue;
 
-                let ufRaw = cols.replace(/["']/g, "").trim();
-                // Validamos que la UF sea un número (para saltar cabeceras o errores de formato)
-                if (isNaN(parseInt(ufRaw))) continue;
-
-                let prop = cols[1]?.replace(/["']/g, "").trim() || "";
-                let inq = cols[3]?.replace(/["']/g, "").trim() || "";
+                let uf = cols.replace(/["']/g, "").trim();
                 
-                // Unificamos nombre para la tarjeta
-                let nombreDisplay = prop;
-                if (inq && inq !== "") nombreDisplay += ` / Inq: ${inq}`;
+                // Saltar si la primera columna no es un número (ej: encabezado "UF")
+                if (isNaN(parseInt(uf))) continue;
 
-                await setDoc(doc(db, "cocheras_edificio", `UF-${ufRaw}`), { 
-                    uf: ufRaw, 
-                    prop: nombreDisplay 
+                let propietario = cols[1]?.replace(/["']/g, "").trim() || "";
+                let inquilino = cols[3]?.replace(/["']/g, "").trim() || "";
+                
+                let nombreCompleto = propietario;
+                if (inquilino && inquilino !== "") {
+                    nombreCompleto += " / Inq: " + inquilino;
+                }
+
+                // Guardar en Firebase con ID único por UF
+                await setDoc(doc(db, "cocheras_edificio", "UF-" + uf), { 
+                    uf: uf, 
+                    prop: nombreCompleto 
                 }, { merge: true });
 
-                // Actualizar barra de carga
-                bar.style.width = Math.round(((i + 1) / lines.length) * 100) + '%';
+                // Actualizar barra
+                let porc = Math.round(((i + 1) / lines.length) * 100);
+                bar.style.width = porc + '%';
             }
             
             setTimeout(() => {
                 pCont.style.display = 'none';
-                alert("Base de datos actualizada con los registros del CSV.");
-            }, 500);
+                alert("Proceso finalizado. Se cargaron las unidades.");
+                ev.target.value = ''; // Reset input file
+            }, 800);
         };
         reader.readAsText(file);
     };
@@ -248,17 +260,17 @@
         ));
     };
 
-    // --- REPORTE INFRACCIÓN ---
+    // --- INFRACCIÓN ---
     document.getElementById('btn-inf').onclick = () => {
         const camInput = document.createElement('input');
         camInput.type = 'file';
         camInput.accept = 'image/*';
         camInput.capture = 'environment';
         camInput.onchange = (e) => {
-            if(e.target.files) {
-                const obs = prompt("Motivo de la infracción:");
-                if(obs !== null) {
-                    const msg = encodeURIComponent(`*REPORTE COCHERAS*%0A*Motivo:* ${obs}%0A_Adjunte la foto capturada._`);
+            if(e.target.files.length > 0) {
+                const motivo = prompt("Ingrese el motivo de la infracción:");
+                if(motivo) {
+                    const msg = encodeURIComponent(`*REPORTE INFRACCIÓN*%0A*Motivo:* ${motivo}%0A_Por favor, envíe la foto a continuación._`);
                     window.open(`https://wa.me/549${MASTER_WA}?text=${msg}`);
                 }
             }

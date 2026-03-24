@@ -9,7 +9,6 @@
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
         body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; }
         
-        /* Estadísticas */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .stat-card { background: var(--card); padding: 10px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
         .stat-val { display: block; font-size: 22px; font-weight: 900; color: var(--blue); }
@@ -108,7 +107,6 @@
     let todasLasCocheras = [];
     let currentDocId = null;
 
-    // --- CARGA DE DATOS Y ESTADÍSTICAS ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
         actualizarEstadisticas();
@@ -149,7 +147,6 @@
         });
     }
 
-    // --- MANEJO DE EVENTOS ---
     document.addEventListener('click', (e) => {
         if(e.target.classList.contains('btn-view')) {
             const id = e.target.getAttribute('data-id');
@@ -184,33 +181,49 @@
         document.getElementById('modal-form').style.display = 'none';
     };
 
-    // --- IMPORTADOR CSV (Detección de formato mejorada) ---
+    // --- IMPORTADOR CSV (Optimizado para procesar los 87 registros) ---
     document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
     document.getElementById('csv-file').onchange = (ev) => {
         const file = ev.target.files;
+        if (!file) return;
+
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
-            const sep = lines.includes(';') ? ';' : ',';
+            const content = e.target.result;
+            const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
             const bar = document.getElementById('progress-bar');
             document.getElementById('p-container').style.display = 'block';
 
             for(let i=0; i < lines.length; i++) {
-                const cols = lines[i].split(sep);
-                const uf = cols?.replace(/["']/g, "").trim();
-                const prop = cols?.replace(/["']/g, "").trim();
-                if(!uf || uf.toLowerCase().includes("uf")) continue;
+                // Regex para manejar comas dentro de comillas (nombres con coma) [cite: 1]
+                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+                
+                let uf = cols?.replace(/["']/g, "").trim();
+                let propNom = cols[1]?.replace(/["']/g, "").trim() || "";
+                let inqNom = cols[3]?.replace(/["']/g, "").trim() || ""; // Captura inquilino del CSV [cite: 1]
 
-                await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), { uf: uf, prop: prop }, { merge: true });
+                // Validar que sea un número de UF válido (salta encabezados) [cite: 1]
+                if(!uf || isNaN(uf)) continue;
+
+                // Unificar Propietario e Inquilino en el mismo campo para visualización
+                let infoPropietario = propNom;
+                if(inqNom && inqNom !== "" && inqNom.toLowerCase() !== "inquilino") {
+                    infoPropietario += ` / Inq: ${inqNom}`;
+                }
+
+                await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), { 
+                    uf: uf, 
+                    prop: infoPropietario 
+                }, { merge: true });
+
                 bar.style.width = ((i / lines.length) * 100) + '%';
             }
-            alert("Base sincronizada exitosamente.");
+            alert("Base de cocheras sincronizada con éxito.");
             document.getElementById('p-container').style.display = 'none';
         };
         reader.readAsText(file);
     };
 
-    // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
         const v = e.target.value.toLowerCase();
         renderizar(todasLasCocheras.filter(c => 
@@ -220,7 +233,6 @@
         ));
     };
 
-    // --- MÓDULO INFRACCIÓN (WhatsApp + Cámara) ---
     document.getElementById('btn-inf').onclick = () => {
         const camInput = document.createElement('input');
         camInput.type = 'file';

@@ -3,34 +3,27 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA COCHERAS - CARGA FINAL</title>
+    <title>SISTEMA COCHERAS - FIX FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; }
         .box { border: 1px solid #2a3942; padding: 15px; border-radius: 10px; background: #111b21; margin-bottom: 15px; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 120px; overflow-y: auto; border: 1px solid #333; white-space: pre-wrap; }
-        .card { background: #1c272e; padding: 12px; margin-top: 8px; border-radius: 8px; border-left: 5px solid #1d6ed7; border-bottom: 1px solid #2a3942; }
-        .input-file { background: #1d6ed7; color: white; padding: 15px; width: 100%; border-radius: 8px; box-sizing: border-box; cursor: pointer; border: none; font-weight: bold; }
-        .btn-borrar { background: #e91e63; color: white; padding: 8px; width: 100%; border: none; margin-top: 10px; border-radius: 5px; font-size: 11px; font-weight: bold; cursor: pointer; }
-        .uf-label { color: #f59e0b; font-weight: bold; font-size: 1.1em; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 100px; overflow-y: auto; border: 1px solid #333; }
+        .card { background: #1c272e; padding: 12px; margin-top: 8px; border-radius: 8px; border-left: 5px solid #1d6ed7; }
+        .btn-blue { background: #1d6ed7; color: white; padding: 15px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <label style="display:block; margin-bottom:10px; color:#8696a0;">SELECCIONE SU ARCHIVO CSV:</label>
-    <input type="file" id="archivo-real" class="input-file">
+    <input type="file" id="archivo" class="btn-blue">
     <div id="log">Estado: Esperando...</div>
 </div>
 
 <div id="lista"></div>
 
-<div class="box">
-    <button class="btn-borrar" id="btn-borrar">LIMPIAR TODA LA BASE DE DATOS</button>
-</div>
-
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -45,105 +38,72 @@
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
 
-    const logger = (m) => {
-        const l = document.getElementById('log');
-        l.innerText += "\n> " + m;
-        l.scrollTop = l.scrollHeight;
-    };
+    const logger = (m) => { document.getElementById('log').innerText += "\n> " + m; };
 
-    // Escuchar cambios y dibujar tarjetas
+    // Mostrar datos
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        const contenedor = document.getElementById('lista');
-        if (snap.empty) {
-            contenedor.innerHTML = "<p style='text-align:center;color:#555;'>No hay datos cargados.</p>";
-            return;
-        }
-        contenedor.innerHTML = snap.docs.map(d => {
+        document.getElementById('lista').innerHTML = snap.docs.map(d => {
             const i = d.data();
-            return `
-                <div class="card">
-                    <span class="uf-label">UF ${i.uf}</span> | Cochera: ${i.cochera}<br>
-                    <small style="color:#aaa;">Propietario/Inq:</small> ${i.prop || 'S/D'}
-                </div>`;
+            return `<div class="card"><b>UF ${i.uf}</b> - Cochera: ${i.cochera}<br>${i.prop}</div>`;
         }).join('');
     });
 
-    const input = document.getElementById('archivo-real');
-    
-    input.addEventListener('change', function() {
-        if (!this.files || !this.files) return;
+    document.getElementById('archivo').onchange = function(e) {
+        const file = e.target.files;
+        if (!file) return;
 
-        logger("Archivo capturado. Leyendo contenido...");
+        logger("Leyendo...");
+        const reader = new FileReader();
 
-        const lector = new FileReader();
-        lector.onload = async (e) => {
+        reader.onload = async (ev) => {
             try {
-                const contenido = e.target.result;
-                // Separar por cualquier tipo de salto de línea (Windows/Mac/Linux)
-                const filas = contenido.split(/\r\n|\n|\r/).filter(f => f.trim().length > 0);
-                
-                logger("Filas detectadas: " + filas.length);
+                const texto = ev.target.result;
+                // Dividimos líneas de forma más simple
+                const filas = texto.split(/\r?\n/).filter(linea => linea.includes(';'));
+                logger("Filas: " + filas.length);
 
                 let batch = writeBatch(db);
                 let count = 0;
 
-                // Empezamos en 1 para saltar el encabezado UF;cochera...
-                for (let i = 1; i < filas.length; i++) {
-                    const columnas = filas[i].split(';');
-                    
-                    // Limpieza total de comillas y espacios
-                    const ufLimpia = columnas ? columnas.replace(/["']/g, "").trim() : "";
-                    
-                    if (!ufLimpia || isNaN(parseInt(ufLimpia))) continue;
+                for (let i = 0; i < filas.length; i++) {
+                    // Saltamos el encabezado si detectamos la palabra "UF"
+                    if (filas[i].startsWith("UF")) continue;
 
-                    const ufID = ufLimpia.padStart(4, '0');
-                    const nCochera = (columnas && columnas.trim() !== "") ? columnas.replace(/["']/g, "").trim() : ufLimpia;
-                    const prop = (columnas) ? columnas.replace(/["']/g, "").trim() : "S/D";
-                    const inq = (columnas) ? columnas.replace(/["']/g, "").trim() : "";
-                    
-                    const nombreFinal = inq ? prop + " / " + inq : prop;
+                    const cols = filas[i].split(';');
+                    const rawUF = cols ? cols.trim() : "";
+                    if (!rawUF || isNaN(parseInt(rawUF))) continue;
 
-                    const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                    batch.set(docRef, {
-                        uf: ufID,
-                        cochera: nCochera,
-                        prop: nombreFinal,
+                    const ufNorm = rawUF.padStart(4, '0');
+                    const coch = (cols && cols.trim()) ? cols.trim() : rawUF;
+                    const prop = cols ? cols.trim() : "S/D";
+                    const inq = cols ? cols.trim() : "";
+                    
+                    const ref = doc(db, "cocheras_edificio", "UF-" + ufNorm);
+                    batch.set(ref, {
+                        uf: ufNorm,
+                        cochera: coch,
+                        prop: inq ? `${prop} / ${inq}` : prop,
                         patente: ""
                     }, { merge: true });
 
                     count++;
-
-                    // Firebase permite máximo 500 operaciones por batch
-                    if (count % 450 === 0) {
+                    
+                    // Guardar cada 400 para no saturar
+                    if (count % 400 === 0) {
                         await batch.commit();
                         batch = writeBatch(db);
-                        logger("Guardando bloque...");
                     }
                 }
 
                 await batch.commit();
-                logger("¡PROCESO COMPLETADO! " + count + " registros subidos.");
+                logger("¡CARGA EXITOSA!");
             } catch (err) {
-                logger("ERROR INTERNO: " + err.message);
-                console.error(err);
+                logger("ERROR: " + err.message);
             }
         };
 
-        // Importante: ISO-8859-1 para que no se rompa con los acentos de los nombres
-        lector.readAsText(this.files, "ISO-8859-1");
-    });
-
-    document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar todos los datos de la nube?")) return;
-        try {
-            const snap = await getDocs(colRef);
-            const b = writeBatch(db);
-            snap.docs.forEach(d => b.delete(d.ref));
-            await b.commit();
-            logger("Base de datos borrada.");
-        } catch (e) {
-            logger("Error al borrar: " + e.message);
-        }
+        // Cambiamos a UTF-8 por defecto, si fallan los acentos probamos ISO luego
+        reader.readAsText(file);
     };
 </script>
 </body>

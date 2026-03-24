@@ -16,18 +16,18 @@
         .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .btn { height: 48px; border-radius: 8px; border: none; font-size: 9px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
-        .progress-container { width: 100%; height: 15px; background: #000; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; border: 2px solid var(--yellow); }
+        .progress-container { width: 100%; height: 20px; background: #000; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; border: 2px solid var(--yellow); position: relative; }
         #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
-        input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
+        #progress-text { position: absolute; width: 100%; text-align: center; color: #000; font-weight: bold; font-size: 12px; line-height: 20px; }
+        input { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
-        .card-header { display: flex; align-items: center; padding: 18px; }
+        .card-header { display: flex; align-items: center; padding: 15px; }
         .card-info { flex: 1; margin-left: 10px; }
-        .card-title { font-size: 20px; font-weight: 900; color: var(--blue); }
-        .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
-        .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; }
-        .detail-item { margin-top: 10px; font-size: 13px; color: #8696a0; }
-        .detail-item b { color: #fff; display: block; font-size: 14px; text-transform: uppercase; }
+        .card-title { font-size: 18px; font-weight: 900; color: var(--blue); }
+        .card-actions { display: flex; gap: 15px; font-size: 18px; color: var(--blue); }
+        .card-detail { display: none; padding: 15px; border-top: 1px solid var(--border); background: #162127; font-size: 13px; }
+        .card-detail b { color: var(--yellow); }
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
         .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
     </style>
@@ -36,33 +36,34 @@
 
 <div class="stats-grid">
     <div class="stat-card"><span class="stat-val" id="st-total">0</span><span class="stat-label">Total UFs</span></div>
-    <div class="stat-card"><span class="stat-val" id="st-ocup" style="color:var(--yellow)">0</span><span class="stat-label">Con Vehículo</span></div>
+    <div class="stat-card"><span class="stat-val" id="st-ocup" style="color:var(--yellow)">0</span><span class="stat-label">Con Patente</span></div>
 </div>
 
 <div class="panel">
     <div class="row">
-        <button class="btn btn-yellow" id="btn-import"><i class="fas fa-file-upload"></i> SUBIR BASE</button>
-        <button class="btn btn-red" id="btn-clear-all"><i class="fas fa-trash-alt"></i> BORRAR BASE</button>
+        <button class="btn btn-yellow" id="btn-import"><i class="fas fa-file-upload"></i> CARGAR CSV</button>
+        <button class="btn btn-red" id="btn-clear-all"><i class="fas fa-trash-alt"></i> BORRAR TODO</button>
         <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
     </div>
-    <div class="progress-container" id="p-container"><div id="progress-bar"></div></div>
+    <div class="progress-container" id="p-container">
+        <div id="progress-bar"></div>
+        <div id="progress-text">0%</div>
+    </div>
     <input type="file" id="csv-file" accept=".csv" style="display:none">
-    <input type="text" id="buscador" placeholder="Buscar UF o Nombre...">
+    <input type="text" id="buscador" placeholder="Buscar UF, Propietario o Patente...">
 </div>
 
-<div id="lista-cocheras"><div style="text-align:center; padding:40px; color:#8696a0;">Iniciando...</div></div>
+<div id="lista-cocheras"></div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
         <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR <span id="label-uf-modal"></span></h2>
-        <input type="text" id="f-prop" placeholder="Propietario / Inquilino">
-        <input type="text" id="f-id" placeholder="Cochera">
-        <input type="text" id="f-patente" placeholder="Patente">
-        <input type="text" id="f-auto" placeholder="Vehículo">
-        <textarea id="f-obs" placeholder="Observaciones..."></textarea>
+        <input type="text" id="f-prop" placeholder="Nombre completo">
+        <input type="text" id="f-patente" placeholder="Patente (Ej: AF123CD)">
+        <input type="text" id="f-auto" placeholder="Vehículo (Marca/Modelo)">
         <div class="row" style="grid-template-columns: 1fr 1fr; margin-top:10px;">
             <button class="btn btn-blue" id="btn-save">GUARDAR</button>
-            <button class="btn btn-grey" id="btn-close">VOLVER</button>
+            <button class="btn btn-grey" id="btn-close">CANCELAR</button>
         </div>
     </div>
 </div>
@@ -97,7 +98,7 @@
     function renderizar(lista) {
         const cont = document.getElementById('lista-cocheras');
         if (lista.length === 0) {
-            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;">BASE VACÍA.<br>Presione SUBIR BASE.</div>';
+            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;">Sin datos. Cargue el archivo CSV.</div>';
             return;
         }
         cont.innerHTML = '';
@@ -117,71 +118,60 @@
                     </div>
                 </div>
                 <div class="card-detail" id="detail-${c.id}">
-                    <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
-                    <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
-                    <div class="detail-item">COCHERA: <b>${c.id_cochera || '---'}</b></div>
+                    <div>PATENTE: <b>${c.patente || 'SIN CARGAR'}</b></div>
+                    <div style="margin-top:5px">VEHÍCULO: <b>${c.auto || 'SIN CARGAR'}</b></div>
                 </div>`;
             cont.appendChild(card);
         });
     }
 
     document.getElementById('btn-clear-all').onclick = async () => {
-        if(!confirm("¿Borrar todos los datos de Firebase?")) return;
+        if(!confirm("¿Borrar todos los datos?")) return;
         const qs = await getDocs(colRef);
         await Promise.all(qs.docs.map(d => deleteDoc(doc(db, "cocheras_edificio", d.id))));
-        alert("Base limpiada.");
+        alert("Base borrada.");
     };
 
-    // --- IMPORTADOR MEJORADO ---
     document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
     document.getElementById('csv-file').onchange = (ev) => {
         const file = ev.target.files;
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (e) => {
-            try {
-                const text = e.target.result;
-                const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
-                const bar = document.getElementById('progress-bar');
-                document.getElementById('p-container').style.display = 'block';
+            const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
+            const pCont = document.getElementById('p-container');
+            const bar = document.getElementById('progress-bar');
+            const pText = document.getElementById('progress-text');
+            pCont.style.display = 'block';
 
-                // Detectar separador automáticamente
-                const firstLine = lines;
-                const sep = firstLine.includes(';') ? ';' : ',';
+            for (let i = 0; i < lines.length; i++) {
+                const cols = lines[i].split(',');
+                let uf = cols?.trim();
+                
+                // Ignorar el encabezado "UF" o líneas vacías
+                if (!uf || isNaN(parseInt(uf))) continue;
 
-                for (let i = 0; i < lines.length; i++) {
-                    // Regex para separar respetando comillas
-                    const regex = new RegExp(`${sep}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
-                    const cols = lines[i].split(regex);
-                    
-                    let uf = cols?.replace(/"/g, "").trim();
-                    if (!uf || isNaN(parseInt(uf))) continue; // Salta encabezados
+                let prop = cols?.trim() || "";
+                let inq = cols?.trim() || "";
+                let nombreCompleto = inq ? `${prop} (Inq: ${inq})` : prop;
 
-                    let prop = cols?.replace(/"/g, "").trim() || "";
-                    let inq = cols?.replace(/"/g, "").trim() || "";
-                    let nombre = inq ? `${prop} / Inq: ${inq}` : prop;
+                // Guardar en Firebase
+                await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), {
+                    uf: uf,
+                    prop: nombreCompleto,
+                    patente: "",
+                    auto: ""
+                }, { merge: true });
 
-                    // Formatear UF a 4 dígitos para orden correcto
-                    let ufId = uf.padStart(4, '0');
-
-                    await setDoc(doc(db, "cocheras_edificio", `UF-${ufId}`), {
-                        uf: ufId,
-                        prop: nombre,
-                        patente: "", auto: "", id_cochera: "", obs: ""
-                    }, { merge: true });
-
-                    bar.style.width = Math.round(((i + 1) / lines.length) * 100) + "%";
-                }
-                alert("Carga finalizada con éxito.");
-            } catch (err) {
-                console.error(err);
-                alert("Error al procesar el archivo. Revisa la consola.");
-            } finally {
-                document.getElementById('p-container').style.display = 'none';
-                ev.target.value = '';
+                let porc = Math.round(((i + 1) / lines.length) * 100);
+                bar.style.width = porc + "%";
+                pText.innerText = porc + "%";
             }
+            pCont.style.display = 'none';
+            alert("¡Base cargada con éxito!");
+            ev.target.value = '';
         };
-        reader.readAsText(file, "UTF-8"); // Forzamos lectura en UTF-8
+        reader.readAsText(file);
     };
 
     document.addEventListener('click', (e) => {
@@ -193,12 +183,10 @@
         if(e.target.classList.contains('btn-edit')) {
             const c = todasLasCocheras.find(x => x.id === id);
             currentDocId = id;
-            document.getElementById('label-uf-modal').innerText = `(UF ${c.uf})`;
+            document.getElementById('label-uf-modal').innerText = `UF ${c.uf}`;
             document.getElementById('f-prop').value = c.prop || "";
             document.getElementById('f-patente').value = c.patente || "";
             document.getElementById('f-auto').value = c.auto || "";
-            document.getElementById('f-id').value = c.id_cochera || "";
-            document.getElementById('f-obs').value = c.obs || "";
             document.getElementById('modal-form').style.display = 'flex';
         }
     });
@@ -208,16 +196,14 @@
         await setDoc(doc(db, "cocheras_edificio", currentDocId), {
             prop: document.getElementById('f-prop').value,
             patente: document.getElementById('f-patente').value.toUpperCase(),
-            auto: document.getElementById('f-auto').value,
-            id_cochera: document.getElementById('f-id').value,
-            obs: document.getElementById('f-obs').value
+            auto: document.getElementById('f-auto').value
         }, { merge: true });
         document.getElementById('modal-form').style.display = 'none';
     };
 
     document.getElementById('buscador').oninput = (e) => {
         const v = e.target.value.toLowerCase();
-        renderizar(todasLasCocheras.filter(c => c.uf.includes(v) || c.prop.toLowerCase().includes(v)));
+        renderizar(todasLasCocheras.filter(c => c.uf.includes(v) || c.prop.toLowerCase().includes(v) || (c.patente && c.patente.toLowerCase().includes(v))));
     };
 </script>
 </body>

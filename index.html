@@ -8,33 +8,26 @@
     <style>
         :root { --bg: #0b141a; --card: #1c272e; --blue: #1d6ed7; --red: #e91e63; --yellow: #f59e0b; --grey: #4b5563; --text: #e9edef; --border: #2a3942; }
         body { margin: 0; background: var(--bg); font-family: 'Segoe UI', sans-serif; color: var(--text); padding: 10px; }
-        
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .stat-card { background: var(--card); padding: 10px; border-radius: 10px; border: 1px solid var(--border); text-align: center; }
         .stat-val { display: block; font-size: 22px; font-weight: 900; color: var(--blue); }
         .stat-label { font-size: 10px; text-transform: uppercase; color: #8696a0; font-weight: bold; }
-
         .panel { background: #111b21; padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 15px; }
         .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
         .btn { height: 48px; border-radius: 8px; border: none; font-size: 9px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
-
         .progress-container { width: 100%; height: 15px; background: #000; border-radius: 10px; margin: 15px 0; display: none; overflow: hidden; border: 2px solid var(--yellow); }
         #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
-
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
-        
         .card { background: #111b21; border-radius: 12px; margin-bottom: 10px; border: 1px solid var(--border); position: relative; overflow: hidden; }
         .card-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--blue); }
         .card-header { display: flex; align-items: center; padding: 18px; }
         .card-info { flex: 1; margin-left: 10px; }
         .card-title { font-size: 20px; font-weight: 900; color: var(--blue); }
         .card-actions { display: flex; gap: 18px; font-size: 18px; color: var(--blue); }
-        
         .card-detail { display: none; padding: 0 18px 18px 24px; border-top: 1px solid var(--border); background: #162127; }
         .detail-item { margin-top: 10px; font-size: 13px; color: #8696a0; }
         .detail-item b { color: #fff; display: block; font-size: 14px; text-transform: uppercase; }
-
         .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 15px; }
         .modal-content { background: var(--card); width: 100%; max-width: 360px; padding: 25px; border-radius: 20px; border: 1px solid #32444e; }
     </style>
@@ -42,14 +35,8 @@
 <body>
 
 <div class="stats-grid">
-    <div class="stat-card">
-        <span class="stat-val" id="st-total">0</span>
-        <span class="stat-label">Total UFs</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-val" id="st-ocup" style="color:var(--yellow)">0</span>
-        <span class="stat-label">Con Vehículo</span>
-    </div>
+    <div class="stat-card"><span class="stat-val" id="st-total">0</span><span class="stat-label">Total UFs</span></div>
+    <div class="stat-card"><span class="stat-val" id="st-ocup" style="color:var(--yellow)">0</span><span class="stat-label">Con Vehículo</span></div>
 </div>
 
 <div class="panel">
@@ -58,24 +45,18 @@
         <button class="btn btn-red" id="btn-clear-all"><i class="fas fa-trash-alt"></i> BORRAR BASE</button>
         <button class="btn btn-grey" onclick="window.location.reload()"><i class="fas fa-sync"></i> RECARGAR</button>
     </div>
-    
-    <div class="progress-container" id="p-container">
-        <div id="progress-bar"></div>
-    </div>
-
+    <div class="progress-container" id="p-container"><div id="progress-bar"></div></div>
     <input type="file" id="csv-file" accept=".csv" style="display:none">
     <input type="text" id="buscador" placeholder="Buscar UF o Nombre...">
 </div>
 
-<div id="lista-cocheras">
-    <div style="text-align:center; padding:40px; color:#8696a0;">Cargando...</div>
-</div>
+<div id="lista-cocheras"><div style="text-align:center; padding:40px; color:#8696a0;">Iniciando...</div></div>
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
         <h2 style="color:var(--blue); margin-top:0; font-size: 18px;">EDITAR <span id="label-uf-modal"></span></h2>
-        <input type="text" id="f-prop" placeholder="Nombre Propietario / Inquilino">
-        <input type="text" id="f-id" placeholder="Nro Cochera Asignada">
+        <input type="text" id="f-prop" placeholder="Propietario / Inquilino">
+        <input type="text" id="f-id" placeholder="Cochera">
         <input type="text" id="f-patente" placeholder="Patente">
         <input type="text" id="f-auto" placeholder="Vehículo">
         <textarea id="f-obs" placeholder="Observaciones..."></textarea>
@@ -106,7 +87,6 @@
     let todasLasCocheras = [];
     let currentDocId = null;
 
-    // --- LISTENER PRINCIPAL ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         todasLasCocheras = snap.docs.map(d => ({id: d.id, ...d.data()}));
         renderizar(todasLasCocheras);
@@ -117,7 +97,7 @@
     function renderizar(lista) {
         const cont = document.getElementById('lista-cocheras');
         if (lista.length === 0) {
-            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;">BASE VACÍA.<br>Cargue el CSV para empezar.</div>';
+            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;">BASE VACÍA.<br>Presione SUBIR BASE.</div>';
             return;
         }
         cont.innerHTML = '';
@@ -145,51 +125,65 @@
         });
     }
 
-    // --- BOTÓN BORRAR TODO ---
     document.getElementById('btn-clear-all').onclick = async () => {
-        if(!confirm("¿ESTÁS SEGURO? Se borrarán los 87 registros y todas las patentes cargadas.")) return;
-        const querySnapshot = await getDocs(colRef);
-        const promesas = querySnapshot.docs.map(d => deleteDoc(doc(db, "cocheras_edificio", d.id)));
-        await Promise.all(promesas);
-        alert("Base de datos reseteada.");
+        if(!confirm("¿Borrar todos los datos de Firebase?")) return;
+        const qs = await getDocs(colRef);
+        await Promise.all(qs.docs.map(d => deleteDoc(doc(db, "cocheras_edificio", d.id))));
+        alert("Base limpiada.");
     };
 
-    // --- IMPORTADOR CSV (MEJORADO) ---
+    // --- IMPORTADOR MEJORADO ---
     document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
     document.getElementById('csv-file').onchange = (ev) => {
         const file = ev.target.files;
         if (!file) return;
         const reader = new FileReader();
         reader.onload = async (e) => {
-            const lines = e.target.result.split(/\r?\n/).filter(l => l.trim() !== "");
-            const bar = document.getElementById('progress-bar');
-            document.getElementById('p-container').style.display = 'block';
+            try {
+                const text = e.target.result;
+                const lines = text.split(/\r?\n/).filter(line => line.trim().length > 0);
+                const bar = document.getElementById('progress-bar');
+                document.getElementById('p-container').style.display = 'block';
 
-            for(let i=0; i < lines.length; i++) {
-                // Regex para separar por comas respetando las comillas
-                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g);
-                if (!cols || isNaN(parseInt(cols.replace(/"/g,"")))) continue;
+                // Detectar separador automáticamente
+                const firstLine = lines;
+                const sep = firstLine.includes(';') ? ';' : ',';
 
-                let uf = cols.replace(/"/g, "").trim();
-                let prop = cols?.replace(/"/g, "").trim() || "";
-                let inq = cols?.replace(/"/g, "").trim() || "";
-                let nombre = prop + (inq ? " / Inq: " + inq : "");
+                for (let i = 0; i < lines.length; i++) {
+                    // Regex para separar respetando comillas
+                    const regex = new RegExp(`${sep}(?=(?:(?:[^"]*"){2})*[^"]*$)`);
+                    const cols = lines[i].split(regex);
+                    
+                    let uf = cols?.replace(/"/g, "").trim();
+                    if (!uf || isNaN(parseInt(uf))) continue; // Salta encabezados
 
-                await setDoc(doc(db, "cocheras_edificio", "UF-" + uf), {
-                    uf: uf,
-                    prop: nombre,
-                    patente: "", auto: "", id_cochera: "", obs: ""
-                }, { merge: true });
+                    let prop = cols?.replace(/"/g, "").trim() || "";
+                    let inq = cols?.replace(/"/g, "").trim() || "";
+                    let nombre = inq ? `${prop} / Inq: ${inq}` : prop;
 
-                bar.style.width = Math.round(((i+1)/lines.length)*100) + "%";
+                    // Formatear UF a 4 dígitos para orden correcto
+                    let ufId = uf.padStart(4, '0');
+
+                    await setDoc(doc(db, "cocheras_edificio", `UF-${ufId}`), {
+                        uf: ufId,
+                        prop: nombre,
+                        patente: "", auto: "", id_cochera: "", obs: ""
+                    }, { merge: true });
+
+                    bar.style.width = Math.round(((i + 1) / lines.length) * 100) + "%";
+                }
+                alert("Carga finalizada con éxito.");
+            } catch (err) {
+                console.error(err);
+                alert("Error al procesar el archivo. Revisa la consola.");
+            } finally {
+                document.getElementById('p-container').style.display = 'none';
+                ev.target.value = '';
             }
-            document.getElementById('p-container').style.display = 'none';
-            alert("Carga de base completa.");
         };
-        reader.readAsText(file);
+        reader.readAsText(file, "UTF-8"); // Forzamos lectura en UTF-8
     };
 
-    // --- EVENTOS MODAL ---
     document.addEventListener('click', (e) => {
         const id = e.target.getAttribute('data-id');
         if(e.target.classList.contains('btn-view')) {
@@ -199,7 +193,7 @@
         if(e.target.classList.contains('btn-edit')) {
             const c = todasLasCocheras.find(x => x.id === id);
             currentDocId = id;
-            document.getElementById('label-uf-modal').innerText = "(UF " + c.uf + ")";
+            document.getElementById('label-uf-modal').innerText = `(UF ${c.uf})`;
             document.getElementById('f-prop').value = c.prop || "";
             document.getElementById('f-patente').value = c.patente || "";
             document.getElementById('f-auto').value = c.auto || "";
@@ -219,6 +213,11 @@
             obs: document.getElementById('f-obs').value
         }, { merge: true });
         document.getElementById('modal-form').style.display = 'none';
+    };
+
+    document.getElementById('buscador').oninput = (e) => {
+        const v = e.target.value.toLowerCase();
+        renderizar(todasLasCocheras.filter(c => c.uf.includes(v) || c.prop.toLowerCase().includes(v)));
     };
 </script>
 </body>

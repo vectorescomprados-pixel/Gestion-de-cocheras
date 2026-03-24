@@ -3,41 +3,48 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - SIN DUPLICADOS</title>
+    <title>SISTEMA COCHERAS - CONTROL TOTAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
-        .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; }
+        .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 10px; color: white; font-size: 16px; box-sizing: border-box; }
         #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; position: relative; }
+        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; }
         .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
         .nombre { font-size: 1.1em; margin: 5px 0; color: #e9edef; }
-        .admin-panel { margin-top: 40px; padding: 15px; border: 1px solid #333; border-radius: 10px; background: #161d22; }
-        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; font-family: monospace; padding: 10px; box-sizing: border-box; }
-        .btn { padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
-        .btn-red { background: #e91e63; color: white; }
+        
+        .admin-panel { margin-top: 40px; padding: 20px; border: 2px dashed #333; border-radius: 15px; background: #161d22; }
+        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; padding: 10px; box-sizing: border-box; font-family: monospace; }
+        .btn { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
+        .btn-red { background: #ff3b30; color: white; }
         .btn-green { background: #00a884; color: white; }
+        #status { font-size: 12px; color: #0f0; margin-top: 5px; font-family: monospace; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h3 style="margin:0;">Cocheras Edificio</h3>
-    <input type="text" id="buscador" class="search-box" placeholder="Buscar UF o Nombre...">
+    <h3 style="margin:0 0 10px 0;">Cocheras Edificio</h3>
+    <input type="text" id="buscador" class="search-box" placeholder="🔎 Buscar UF o Nombre...">
 </div>
 
 <div id="lista"></div>
 
 <div class="admin-panel">
-    <h4 style="margin:0;">Panel de Control</h4>
-    <button class="btn btn-red" id="btn-borrar">BORRAR TODO (LIMPIEZA INICIAL)</button>
+    <h4 style="margin:0;">⚙️ PANEL DE REESTABLECIMIENTO</h4>
+    <p style="font-size: 12px; color: #8696a0;">Si hay duplicados, primero usa el botón rojo.</p>
+    
+    <button class="btn btn-red" onclick="window.borrarTodo()">1. BORRAR TODA LA NUBE</button>
+    
     <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
-    <button class="btn btn-green" id="btn-cargar">CARGAR / ACTUALIZAR DATOS</button>
+    
+    <button class="btn btn-green" onclick="window.cargarDatos()">2. CARGAR / REEMPLAZAR</button>
+    <div id="status">Estado: Listo</div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -54,95 +61,86 @@
 
     let datosLocales = [];
 
-    // --- RENDERIZADO ---
+    // --- ESCUCHA TIEMPO REAL ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        const listado = document.getElementById('lista');
-        listado.innerHTML = ""; 
-        datosLocales = [];
+        datosLocales = snap.docs.map(d => d.data());
+        renderizar(datosLocales);
+    });
 
-        snap.forEach(doc => {
-            const i = doc.data();
-            datosLocales.push(i);
+    function renderizar(datos) {
+        const listado = document.getElementById('lista');
+        listado.innerHTML = "";
+        datos.forEach(i => {
             const div = document.createElement('div');
             div.className = 'card';
             div.innerHTML = `
                 <div class="uf-tag">UF ${i.uf}</div>
                 <div class="nombre">${i.prop}</div>
-                <div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>
+                <div style="color:#8696a0; font-size:0.9em;">Cochera Asignada: <b>${i.cochera}</b></div>
             `;
             listado.appendChild(div);
         });
-    });
+    }
 
     // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtrados = datosLocales.filter(i => i.uf.includes(term) || i.prop.toLowerCase().includes(term));
-        const listado = document.getElementById('lista');
-        listado.innerHTML = "";
-        filtrados.forEach(i => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: ${i.cochera}</div>`;
-            listado.appendChild(div);
-        });
+        const t = e.target.value.toLowerCase();
+        renderizar(datosLocales.filter(i => i.uf.includes(t) || i.prop.toLowerCase().includes(t)));
     };
 
-    // --- BORRADO FÍSICO ---
-    document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar todo?")) return;
+    // --- FUNCIONES GLOBALES (PARA QUE EL BOTÓN SIEMPRE LAS ENCUENTRE) ---
+    
+    window.borrarTodo = async () => {
+        if(!confirm("¿Estás seguro de vaciar la base de datos?")) return;
+        document.getElementById('status').innerText = "Borrando...";
         const snap = await getDocs(colRef);
-        const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-        alert("Base de datos vaciada.");
+        for (const d of snap.docs) {
+            await deleteDoc(d.ref);
+        }
+        alert("Nube vaciada correctamente.");
+        document.getElementById('status').innerText = "Base vacía.";
     };
 
-    // --- CARGA INTELIGENTE ---
-    document.getElementById('btn-cargar').onclick = async () => {
+    window.cargarDatos = async () => {
         const texto = document.getElementById('csv-input').value.trim();
-        if(!texto) return;
+        if(!texto) return alert("Pega el texto del CSV primero");
 
         const filas = texto.split(/\r?\n/).filter(l => l.includes(','));
-        let batch = writeBatch(db);
-        let contador = 0;
+        document.getElementById('status').innerText = "Procesando " + filas.length + " filas...";
 
+        let contador = 0;
         for (let f of filas) {
             if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
-            const c = f.split(',');
             
-            // Limpiamos la UF de cualquier espacio o caracter extraño
-            let ufLimpia = String(c || "").replace(/[^0-9]/g, '');
-            if(!ufLimpia) continue;
+            const c = f.split(',');
+            let ufNum = String(c || "").replace(/[^0-9]/g, '');
+            if(!ufNum) continue;
 
-            const ufID = ufLimpia.padStart(4, '0'); // Formato "0001"
+            const ufID = ufNum.padStart(4, '0');
             const prop = (c || "S/D").trim();
             const inq = (c || "").trim();
 
-            let cocheraFinal = ufLimpia;
+            let cocheraFinal = ufNum;
             if(inq) {
                 const partes = inq.split(' ');
                 cocheraFinal = partes[partes.length - 1];
             }
 
-            // IMPORTANTE: El ID del documento es "UF-" + ufID (ej: UF-0001)
-            // Si ya existe uno con ese ID, Firebase lo REEMPLAZA en lugar de duplicar
-            const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-            
-            batch.set(docRef, {
+            // Usamos setDoc para asegurar que si el ID existe, se SOBRESCRIBA (adiós duplicados)
+            await setDoc(doc(db, "cocheras_edificio", "UF-" + ufID), {
                 uf: ufID,
                 prop: inq ? `${prop} / ${inq}` : prop,
                 cochera: cocheraFinal,
                 patente: ""
-            }, { merge: true });
-
+            });
+            
             contador++;
-            if (contador % 400 === 0) { await batch.commit(); batch = writeBatch(db); }
+            document.getElementById('status').innerText = "Cargando: " + contador + " de " + (filas.length-1);
         }
 
-        await batch.commit();
-        alert("¡Carga finalizada! Registros procesados: " + contador);
+        alert("¡ÉXITO! " + contador + " registros actualizados.");
         document.getElementById('csv-input').value = "";
+        document.getElementById('status').innerText = "Listo.";
     };
 </script>
 </body>

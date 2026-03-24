@@ -2,24 +2,26 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <title>SISTEMA COCHERAS - COMPATIBILIDAD TOTAL</title>
+    <title>SISTEMA COCHERAS - MOTOR GESTION UF</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
-        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; max-width: 400px; margin: auto; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 120px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; white-space: pre-wrap; }
-        input[type="file"] { background: #1d6ed7; color: white; padding: 15px; width: 100%; border-radius: 8px; border: none; cursor: pointer; box-sizing: border-box; }
-        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 8px; text-align: left; border-left: 5px solid #f59e0b; }
+        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; max-width: 450px; margin: auto; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 150px; overflow-y: auto; border: 1px solid #333; margin-top: 15px; text-align: left; white-space: pre-wrap; }
+        .btn-import { background: #25d366; color: black; padding: 15px; width: 100%; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 16px; margin-bottom: 10px; }
+        .card { background: #1c272e; padding: 12px; margin-top: 10px; border-radius: 8px; text-align: left; border-left: 5px solid #25d366; }
+        input[type="file"] { margin-bottom: 15px; color: #8696a0; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <h3>CARGAR ARCHIVO CSV</h3>
-    <input type="file" id="f" onchange="procesarArchivo(this)">
-    <div id="log">Estado: Esperando archivo...</div>
+    <h3>IMPORTAR DESDE RESPALDO_UF</h3>
+    <input type="file" id="archivo-input" accept=".csv">
+    <button class="btn-import" onclick="ejecutarImportacion()">SUBIR A FIREBASE</button>
+    <div id="log">Estado: Esperando archivo de Gestion UF...</div>
 </div>
 
-<div id="lista" style="max-width:400px; margin: 20px auto;"></div>
+<div id="lista" style="max-width:450px; margin: 20px auto;"></div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
@@ -38,86 +40,89 @@
     const db = getFirestore(app);
     const colRef = collection(db, "cocheras_edificio");
 
-    window.logger = (m) => { 
+    window.logger = (m) => {
         const l = document.getElementById('log');
-        l.innerText += "\n> " + m; 
+        l.innerText += "\n> " + m;
         l.scrollTop = l.scrollHeight;
     };
 
-    // Escuchar cambios
+    // Monitor de datos
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         document.getElementById('lista').innerHTML = snap.docs.map(d => {
             const i = d.data();
-            return `<div class="card"><b>UF ${i.uf}</b> - Cochera: ${i.cochera}<br>${i.prop}</div>`;
+            return `<div class="card"><b>UF ${i.uf}</b> (Cochera ${i.cochera})<br>${i.prop}</div>`;
         }).join('');
     });
 
-    // Función global para que el input la encuentre
-    window.procesarArchivo = function(input) {
-        const file = input.files;
-        if (!file) return;
+    window.ejecutarImportacion = function() {
+        const input = document.getElementById('archivo-input');
+        if (!input.files) {
+            alert("Selecciona el archivo primero");
+            return;
+        }
 
-        window.logger("Leyendo archivo: " + file.name);
-
+        window.logger("Iniciando lectura de " + input.files.name);
         const reader = new FileReader();
 
         reader.onload = async function(e) {
             try {
-                const texto = e.target.result;
-                if (!texto) {
-                    window.logger("Error: El archivo está vacío.");
-                    return;
-                }
-
-                const filas = texto.split(/\r?\n/).filter(l => l.includes(';'));
-                window.logger("Filas detectadas: " + filas.length);
+                const contenido = e.target.result;
+                // Separamos por líneas
+                const lineas = contenido.split(/\r?\n/).filter(l => l.trim() !== "");
+                window.logger("Líneas encontradas: " + lineas.length);
 
                 let batch = writeBatch(db);
-                let count = 0;
+                let contador = 0;
 
-                for (let i = 0; i < filas.length; i++) {
-                    const linea = filas[i];
-                    if (linea.toUpperCase().indexOf("UF") === 0) continue;
+                // Empezamos en 1 para saltar: UF,Propietario,TelProp,Inquilino,TelInq
+                for (let i = 1; i < lineas.length; i++) {
+                    const fila = lineas[i];
+                    // El respaldo usa comas (,)
+                    const c = fila.split(',');
 
-                    const c = linea.split(';');
-                    const rawUF = c ? c.replace(/"/g, '').trim() : "";
+                    if (c.length < 2) continue;
+
+                    // Limpiar UF (quitar espacios o comillas)
+                    const ufRaw = c.replace(/[^0-9]/g, '');
+                    if (!ufRaw) continue;
+
+                    const ufID = ufRaw.padStart(4, '0');
+                    const propietario = c ? c.trim() : "S/D";
+                    const inquilino = c ? c.trim() : "";
                     
-                    if (!rawUF || isNaN(parseInt(rawUF))) continue;
+                    // Armamos el nombre combinado
+                    const nombreMostrar = inquilino ? `${propietario} / ${inquilino}` : propietario;
 
-                    const ufID = rawUF.padStart(4, '0');
-                    const nCoch = (c && c.trim() !== "") ? c.trim() : rawUF;
-                    const prop = c ? c.trim() : "S/D";
-                    const inq = c ? c.trim() : "";
-                    
                     const ref = doc(db, "cocheras_edificio", "UF-" + ufID);
                     batch.set(ref, {
                         uf: ufID,
-                        cochera: nCoch,
-                        prop: inq ? prop + " / " + inq : prop,
-                        patente: ""
+                        cochera: ufRaw, // Por defecto, cochera = UF
+                        prop: nombreMostrar,
+                        patente: "",
+                        auto: ""
                     }, { merge: true });
 
-                    count++;
-                    if (count % 400 === 0) {
+                    contador++;
+
+                    // Commit cada 450 para no saturar Firebase
+                    if (contador % 450 === 0) {
                         await batch.commit();
                         batch = writeBatch(db);
+                        window.logger("Guardando bloque...");
                     }
                 }
 
                 await batch.commit();
-                window.logger("¡ÉXITO! " + count + " UFs cargadas.");
+                window.logger("¡IMPORTACIÓN EXITOSA! " + contador + " registros.");
 
             } catch (err) {
-                window.logger("ERROR INTERNO: " + err.message);
+                window.logger("ERROR: " + err.message);
+                console.error(err);
             }
         };
 
-        reader.onerror = function() {
-            window.logger("Error al leer el archivo físico.");
-        };
-
-        // El método más viejo y confiable
-        reader.readAsText(file, "ISO-8859-1");
+        // Leemos con la misma codificación que genera el backup
+        reader.readAsText(input.files, "UTF-8");
     };
 </script>
 </body>

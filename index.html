@@ -2,30 +2,26 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0">
-    <title>SISTEMA COCHERAS - V3</title>
+    <title>SISTEMA REPARADO</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; }
-        .box { border: 1px solid #2a3942; padding: 15px; border-radius: 10px; margin-bottom: 15px; background: #111b21; }
-        button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn-blue { background: #1d6ed7; color: white; }
-        .btn-red { background: #e91e63; color: white; }
-        .btn-grey { background: #333; color: #ccc; }
-        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 11px; height: 180px; overflow-y: auto; border: 1px solid #333; white-space: pre-wrap; }
-        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 8px; border-left: 5px solid #f59e0b; }
+        body { background: #0b141a; color: white; font-family: sans-serif; padding: 20px; }
+        .box { border: 2px solid #2a3942; padding: 20px; border-radius: 10px; background: #111b21; margin-bottom: 20px; }
+        #log { background: #000; color: #0f0; padding: 10px; font-family: monospace; height: 150px; overflow-y: auto; border: 1px solid #333; margin-top: 10px; white-space: pre-wrap; }
+        .card { background: #1c272e; padding: 10px; margin-top: 10px; border-radius: 5px; border-left: 5px solid #1d6ed7; }
+        input[type="file"] { background: #1d6ed7; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div class="box">
-    <div id="log">SISTEMA INICIADO: Toque el botón azul para cargar.</div>
+    <h3>PASO 1: Seleccionar Archivo</h3>
+    <input type="file" id="csv-input" accept=".csv">
+    
+    <div id="log">Estado: Esperando archivo...</div>
 </div>
 
 <div class="box">
-    <button class="btn-grey" onclick="alert('El sistema está respondiendo correctamente')">PROBAR BOTONES</button>
-    <button class="btn-red" id="btn-borrar">1. BORRAR TODO</button>
-    <button class="btn-blue" id="btn-fake-input">2. SELECCIONAR ARCHIVO CSV</button>
-    <input type="file" id="csv-input" accept=".csv" style="display:none">
+    <button style="background:red; color:white; padding:10px; width:100%; border:none; cursor:pointer;" id="btn-borrar">BORRAR TODO</button>
 </div>
 
 <div id="resultado"></div>
@@ -51,110 +47,69 @@
         const l = document.getElementById('log');
         l.innerText += "\n> " + msg;
         l.scrollTop = l.scrollHeight;
-        console.log(msg);
     };
 
-    // Botón para abrir el selector de archivos (más compatible)
-    document.getElementById('btn-fake-input').onclick = () => {
-        logger("Abriendo selector de archivos...");
-        document.getElementById('csv-input').click();
-    };
-
-    // Monitor en tiempo real
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         const res = document.getElementById('resultado');
         res.innerHTML = snap.docs.map(d => {
             const i = d.data();
-            return `<div class="card"><b>UF ${i.uf}</b> - Cochera: ${i.cochera}<br>${i.prop}</div>`;
+            return `<div class="card">UF: ${i.uf} | Cochera: ${i.cochera}<br>Prop: ${i.prop}</div>`;
         }).join('');
     });
 
-    // Evento de cambio en el input de archivo
-    document.getElementById('csv-input').addEventListener('change', function(e) {
+    // Cambiamos a 'input' para máxima compatibilidad
+    document.getElementById('csv-input').addEventListener('input', function(e) {
         const file = e.target.files;
-        if (!file) {
-            logger("No se seleccionó ningún archivo.");
-            return;
-        }
+        if (!file) return;
 
-        logger("Archivo recibido: " + file.name + " (" + file.size + " bytes)");
+        logger("¡ARCHIVO DETECTADO! Nombre: " + file.name);
         
         const reader = new FileReader();
-        
-        reader.onloadStart = () => logger("Empezando a leer archivo...");
-        
         reader.onload = async (ev) => {
             try {
                 const texto = ev.target.result;
-                if (!texto) {
-                    logger("ERROR: El archivo está vacío.");
-                    return;
-                }
+                const lineas = texto.split(/\r?\n/).filter(l => l.trim() !== "");
+                logger("Líneas leídas: " + lineas.length);
 
-                const lineas = texto.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
-                logger("Líneas detectadas: " + lineas.length);
-
-                if (lineas.length < 2) {
-                    logger("ERROR: El archivo no tiene suficientes filas.");
-                    return;
-                }
-
-                let batch = writeBatch(db);
+                const batch = writeBatch(db);
                 let contador = 0;
 
                 for (let i = 1; i < lineas.length; i++) {
-                    const fila = lineas[i];
-                    // Detectar separador automáticamente
-                    let columnas = fila.includes(';') ? fila.split(';') : fila.split(',');
+                    const columnas = lineas[i].split(';');
+                    if (columnas.length < 1) continue;
 
-                    const rawUF = columnas ? columnas.replace(/"/g, '').trim() : "";
+                    const rawUF = columnas.trim();
                     if (!rawUF || isNaN(parseInt(rawUF))) continue;
 
-                    const uf = rawUF.padStart(4, '0');
-                    const cochera = (columnas && columnas.trim() !== "") ? columnas.replace(/"/g, '').trim() : rawUF;
-                    
-                    // Lógica para Propietario / Inquilino según tu archivo real
-                    const prop = (columnas && columnas.trim() !== "") ? columnas.replace(/"/g, '').trim() : "S/D";
-                    const inq = (columnas && columnas.trim() !== "") ? columnas.replace(/"/g, '').trim() : "";
+                    const ufNorm = rawUF.padStart(4, '0');
+                    const cochera = columnas ? columnas.trim() : rawUF;
+                    const prop = columnas ? columnas.trim() : "S/D";
+                    const inq = columnas ? columnas.trim() : "";
                     const nombreFinal = inq ? prop + " / " + inq : prop;
 
-                    const ref = doc(db, "cocheras_edificio", "UF-" + uf);
-                    batch.set(ref, { 
-                        uf: uf, 
-                        cochera: cochera, 
-                        prop: nombreFinal,
-                        patente: "",
-                        auto: "" 
-                    }, { merge: true });
-                    
+                    const ref = doc(db, "cocheras_edificio", "UF-" + ufNorm);
+                    batch.set(ref, { uf: ufNorm, cochera, prop: nombreFinal, patente: "" }, { merge: true });
                     contador++;
                 }
 
-                logger("Enviando " + contador + " registros a la nube...");
+                logger("Enviando " + contador + " filas a Firebase...");
                 await batch.commit();
-                logger("¡PROCESO FINALIZADO CON ÉXITO!");
-                
+                logger("¡LISTO! Datos guardados.");
+
             } catch (err) {
-                logger("ERROR CRÍTICO: " + err.message);
+                logger("ERROR: " + err.message);
             }
         };
-
-        reader.onerror = (err) => logger("Error de FileReader: " + err.target.error.name);
-        
-        // Usamos readAsText básico
-        reader.readAsText(file);
+        reader.readAsText(file, "ISO-8859-1");
     });
 
     document.getElementById('btn-borrar').onclick = async () => {
-        if(!confirm("¿Borrar todo?")) return;
-        try {
-            logger("Borrando base de datos...");
-            const snap = await getDocs(colRef);
-            const b = writeBatch(db);
-            snap.docs.forEach(d => b.delete(d.ref));
-            await b.commit();
-            logger("Base de datos borrada.");
-        } catch (e) { logger("Error al borrar: " + e.message); }
+        if(!confirm("¿Borrar?")) return;
+        const snap = await getDocs(colRef);
+        const b = writeBatch(db);
+        snap.docs.forEach(d => b.delete(d.ref));
+        await b.commit();
+        logger("Base borrada.");
     };
 </script>
 </body>

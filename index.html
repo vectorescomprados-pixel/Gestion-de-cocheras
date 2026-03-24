@@ -19,8 +19,8 @@
         .btn { height: 48px; border-radius: 8px; border: none; font-size: 10px; font-weight: 900; text-transform: uppercase; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-blue { background: var(--blue); } .btn-grey { background: var(--grey); } .btn-red { background: var(--red); } .btn-yellow { background: var(--yellow); color: #000; }
 
-        .progress-container { width: 100%; height: 6px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
-        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.3s; }
+        .progress-container { width: 100%; height: 10px; background: #0b141a; border-radius: 10px; margin: 10px 0; display: none; overflow: hidden; border: 1px solid var(--border); }
+        #progress-bar { width: 0%; height: 100%; background: var(--yellow); transition: width 0.1s; }
 
         input, textarea { width: 100%; background: #1a242b; border: 1px solid #333; border-radius: 8px; color: #fff; padding: 12px; box-sizing: border-box; margin: 8px 0; font-size: 16px; outline: none; border-left: 3px solid var(--blue); }
         
@@ -68,7 +68,7 @@
 </div>
 
 <div id="lista-cocheras">
-    <div style="text-align:center; padding:40px; color:#8696a0;">Iniciando sistema...</div>
+    <div style="text-align:center; padding:40px; color:#8696a0;">Esperando carga de base de datos...</div>
 </div>
 
 <div id="modal-form" class="modal">
@@ -121,7 +121,11 @@
 
     function renderizar(lista) {
         const cont = document.getElementById('lista-cocheras');
-        cont.innerHTML = lista.length === 0 ? '<div style="text-align:center; padding:40px; color:#8696a0;">Sin registros. Importe el CSV.</div>' : '';
+        if (lista.length === 0) {
+            cont.innerHTML = '<div style="text-align:center; padding:40px; color:#8696a0;">No hay registros cargados. Use el botón "SUBIR BASE".</div>';
+            return;
+        }
+        cont.innerHTML = '';
         lista.forEach(c => {
             const card = document.createElement('div');
             card.className = 'card';
@@ -130,7 +134,7 @@
                 <div class="card-header">
                     <div class="card-info">
                         <div class="card-title">UF ${c.uf}</div>
-                        <div style="font-size:14px; color:#fff">${c.prop || '---'}</div>
+                        <div style="font-size:14px; color:#fff">${c.prop || 'SIN NOMBRE'}</div>
                     </div>
                     <div class="card-actions">
                         <i class="far fa-eye btn-view" data-id="${c.id}"></i>
@@ -138,15 +142,16 @@
                     </div>
                 </div>
                 <div class="card-detail" id="detail-${c.id}">
-                    <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || 'NO ASIGNADA'}</b></div>
-                    <div class="detail-item">PATENTE: <b>${c.patente || 'SIN PATENTE'}</b></div>
-                    <div class="detail-item">VEHÍCULO: <b>${c.auto || 'SIN VEHÍCULO'}</b></div>
-                    <div class="detail-item">OBSERVACIONES: <b>${c.obs || 'Sin notas'}</b></div>
+                    <div class="detail-item">NRO COCHERA: <b>${c.id_cochera || '---'}</b></div>
+                    <div class="detail-item">PATENTE: <b>${c.patente || '---'}</b></div>
+                    <div class="detail-item">VEHÍCULO: <b>${c.auto || '---'}</b></div>
+                    <div class="detail-item">OBSERVACIONES: <b>${c.obs || '---'}</b></div>
                 </div>`;
             cont.appendChild(card);
         });
     }
 
+    // --- EVENTOS DE UI ---
     document.addEventListener('click', (e) => {
         if(e.target.classList.contains('btn-view')) {
             const id = e.target.getAttribute('data-id');
@@ -181,7 +186,7 @@
         document.getElementById('modal-form').style.display = 'none';
     };
 
-    // --- IMPORTADOR CSV (Optimizado para procesar los 87 registros) ---
+    // --- IMPORTADOR CSV CORREGIDO PARA Respaldo1_UF.csv ---
     document.getElementById('btn-import').onclick = () => document.getElementById('csv-file').click();
     document.getElementById('csv-file').onchange = (ev) => {
         const file = ev.target.files;
@@ -190,40 +195,50 @@
         const reader = new FileReader();
         reader.onload = async (e) => {
             const content = e.target.result;
+            // Divide por líneas y limpia espacios
             const lines = content.split(/\r?\n/).filter(l => l.trim() !== "");
             const bar = document.getElementById('progress-bar');
-            document.getElementById('p-container').style.display = 'block';
+            const pCont = document.getElementById('p-container');
+            
+            pCont.style.display = 'block';
+            bar.style.width = '0%';
 
             for(let i=0; i < lines.length; i++) {
-                // Regex para manejar comas dentro de comillas (nombres con coma) [cite: 1]
-                const cols = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
+                // Regex avanzado para capturar campos con comas dentro de comillas
+                const pattern = /(".*?"|[^",\s]+)(?=\s*,|\s*$)/g;
+                const cols = lines[i].match(pattern);
                 
-                let uf = cols?.replace(/["']/g, "").trim();
-                let propNom = cols[1]?.replace(/["']/g, "").trim() || "";
-                let inqNom = cols[3]?.replace(/["']/g, "").trim() || ""; // Captura inquilino del CSV [cite: 1]
+                if (!cols || cols.length < 2) continue;
 
-                // Validar que sea un número de UF válido (salta encabezados) [cite: 1]
-                if(!uf || isNaN(uf)) continue;
+                let ufRaw = cols.replace(/["']/g, "").trim();
+                // Validamos que la UF sea un número (para saltar cabeceras o errores de formato)
+                if (isNaN(parseInt(ufRaw))) continue;
 
-                // Unificar Propietario e Inquilino en el mismo campo para visualización
-                let infoPropietario = propNom;
-                if(inqNom && inqNom !== "" && inqNom.toLowerCase() !== "inquilino") {
-                    infoPropietario += ` / Inq: ${inqNom}`;
-                }
+                let prop = cols[1]?.replace(/["']/g, "").trim() || "";
+                let inq = cols[3]?.replace(/["']/g, "").trim() || "";
+                
+                // Unificamos nombre para la tarjeta
+                let nombreDisplay = prop;
+                if (inq && inq !== "") nombreDisplay += ` / Inq: ${inq}`;
 
-                await setDoc(doc(db, "cocheras_edificio", `UF-${uf}`), { 
-                    uf: uf, 
-                    prop: infoPropietario 
+                await setDoc(doc(db, "cocheras_edificio", `UF-${ufRaw}`), { 
+                    uf: ufRaw, 
+                    prop: nombreDisplay 
                 }, { merge: true });
 
-                bar.style.width = ((i / lines.length) * 100) + '%';
+                // Actualizar barra de carga
+                bar.style.width = Math.round(((i + 1) / lines.length) * 100) + '%';
             }
-            alert("Base de cocheras sincronizada con éxito.");
-            document.getElementById('p-container').style.display = 'none';
+            
+            setTimeout(() => {
+                pCont.style.display = 'none';
+                alert("Base de datos actualizada con los registros del CSV.");
+            }, 500);
         };
         reader.readAsText(file);
     };
 
+    // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
         const v = e.target.value.toLowerCase();
         renderizar(todasLasCocheras.filter(c => 
@@ -233,6 +248,7 @@
         ));
     };
 
+    // --- REPORTE INFRACCIÓN ---
     document.getElementById('btn-inf').onclick = () => {
         const camInput = document.createElement('input');
         camInput.type = 'file';

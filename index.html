@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - RESET TOTAL</title>
+    <title>GESTIÓN COCHERAS - FIX FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
@@ -12,13 +12,11 @@
         .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; }
         .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
         .nombre { font-size: 1.1em; margin: 5px 0; color: #e9edef; }
-        
-        .admin-panel { margin-top: 40px; padding: 20px; border: 2px dashed #ff3b30; border-radius: 15px; background: #1c1111; }
+        .admin-panel { margin-top: 40px; padding: 20px; border: 2px dashed #444; border-radius: 15px; background: #161d22; }
         textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; padding: 10px; box-sizing: border-box; }
         .btn { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
         .btn-red { background: #ff3b30; color: white; }
         .btn-green { background: #00a884; color: white; }
-        #status { font-size: 13px; color: #ff3b30; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -31,17 +29,15 @@
 <div id="lista"></div>
 
 <div class="admin-panel">
-    <h4 style="margin:0; color: #ff3b30;">⚠️ REINICIO DE EMERGENCIA</h4>
-    <p style="font-size: 11px; color: #8696a0;">Usa el botón rojo para vaciar TODO antes de cargar.</p>
-    <button class="btn btn-red" onclick="window.resetAbsoluto()">BORRAR TODA LA BASE DE DATOS</button>
+    <h4 style="margin:0;">⚙️ PANEL DE CONTROL</h4>
+    <button class="btn btn-red" onclick="window.resetTotal()">1. LIMPIAR TODO</button>
     <textarea id="csv-input" placeholder="Pega el CSV aquí..."></textarea>
-    <button class="btn btn-green" onclick="window.cargarLimpio()">CARGAR DATOS NUEVOS</button>
-    <div id="status">Estado: Listo</div>
+    <button class="btn btn-green" onclick="window.cargarSeguro()">2. CARGAR SIN DUPLICADOS</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDocs, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -58,15 +54,19 @@
 
     let datosLocales = [];
 
+    // --- VISUALIZACIÓN ---
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         const listado = document.getElementById('lista');
         listado.innerHTML = "";
         datosLocales = [];
+        let control = new Set();
 
-        snap.forEach(docSnap => {
-            const i = docSnap.data();
-            // Evitamos duplicados visuales comparando IDs si fuera necesario
+        snap.forEach(d => {
+            const i = d.data();
+            if(control.has(i.uf)) return; 
+            control.add(i.uf);
             datosLocales.push(i);
+
             const div = document.createElement('div');
             div.className = 'card';
             div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
@@ -74,6 +74,55 @@
         });
     });
 
+    // --- FUNCIÓN DE LIMPIEZA PROFUNDA ---
+    window.resetTotal = async () => {
+        if(!confirm("¿Borrar todo?")) return;
+        const snap = await getDocs(colRef);
+        for (const d of snap.docs) { await deleteDoc(doc(db, "cocheras_edificio", d.id)); }
+        alert("Nube vaciada. La lista debe quedar limpia.");
+        location.reload(); 
+    };
+
+    // --- FUNCIÓN DE CARGA INTELIGENTE ---
+    window.cargarSeguro = async () => {
+        const texto = document.getElementById('csv-input').value.trim();
+        if(!texto) return alert("Pega los datos");
+
+        const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
+        let procesadas = 0;
+
+        for (let f of lineas) {
+            if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
+            const c = f.split(',');
+            
+            // 1. Extraer solo el número de UF (limpia teléfonos y basura)
+            let ufLimpia = String(c || "").replace(/[^0-9]/g, '');
+            if(!ufLimpia || ufLimpia.length > 4) continue; // Si es más largo que 4, es un teléfono, no una UF
+
+            let ufID = ufLimpia.padStart(4, '0');
+            let prop = String(c || "S/D").trim();
+            let inq = String(c || "").trim();
+
+            // 2. Limpiar nombre para que no se repita el propietario si el inquilino es igual
+            let nombreFinal = inq ? prop + " / " + inq : prop;
+
+            // 3. ID DE COCHERA: Siempre igual a la UF para evitar números de 15 cifras
+            let cocheraID = ufLimpia; 
+
+            // 4. GUARDAR CON ID FIJO "UF-XXXX"
+            await setDoc(doc(db, "cocheras_edificio", "UF-" + ufID), {
+                uf: ufID,
+                prop: nombreFinal,
+                cochera: cocheraID,
+                patente: ""
+            });
+            procesadas++;
+        }
+        alert("Cargados " + procesadas + " registros únicos.");
+        document.getElementById('csv-input').value = "";
+    };
+
+    // --- BUSCADOR ---
     document.getElementById('buscador').oninput = (e) => {
         const t = e.target.value.toLowerCase();
         const filtrados = datosLocales.filter(i => i.uf.includes(t) || i.prop.toLowerCase().includes(t));
@@ -85,69 +134,6 @@
             div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
             listado.appendChild(div);
         });
-    };
-
-    // FUNCIÓN DE BORRADO TOTAL REAL
-    window.resetAbsoluto = async () => {
-        if(!confirm("¿SEGURO? Se borrará TODO de la nube para eliminar duplicados.")) return;
-        document.getElementById('status').innerText = "BORRANDO... ESPERE";
-        const snap = await getDocs(colRef);
-        
-        // Borramos uno por uno para asegurar que no quede NADA
-        for (const d of snap.docs) {
-            await deleteDoc(doc(db, "cocheras_edificio", d.id));
-        }
-        
-        alert("Base de datos TOTALMENTE vacía. Ya no deberían quedar duplicados.");
-        document.getElementById('status').innerText = "Base vacía.";
-    };
-
-    window.cargarLimpio = async () => {
-        const input = document.getElementById('csv-input');
-        const texto = input.value.trim();
-        if(!texto) return alert("Pega los datos");
-
-        const status = document.getElementById('status');
-        const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
-        
-        try {
-            let batch = writeBatch(db);
-            let ufsYaVistas = new Set();
-            let contador = 0;
-
-            for (let f of lineas) {
-                if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
-                const c = f.split(',');
-                let ufRaw = String(c || "").replace(/[^0-9]/g, '');
-                if(!ufRaw) continue;
-
-                let ufID = ufRaw.padStart(4, '0');
-                if(ufsYaVistas.has(ufID)) continue;
-                ufsYaVistas.add(ufID);
-
-                let prop = String(c || "S/D").trim();
-                let inq = String(c || "").trim();
-                let cocheraFinal = inq ? inq.split(' ').pop() : ufRaw;
-
-                // Forzamos el ID de documento único
-                const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                batch.set(docRef, {
-                    uf: ufID,
-                    prop: inq ? prop + " / " + inq : prop,
-                    cochera: String(cocheraFinal),
-                    patente: ""
-                }, { merge: true });
-
-                contador++;
-            }
-
-            await batch.commit();
-            alert("Carga terminada. Registros únicos: " + contador);
-            input.value = "";
-            status.innerText = "Sincronizado correctamente.";
-        } catch (e) {
-            alert("Error: " + e.message);
-        }
     };
 </script>
 </body>

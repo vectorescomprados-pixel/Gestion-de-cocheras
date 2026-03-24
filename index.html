@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - LIMPIEZA TOTAL</title>
+    <title>SISTEMA COCHERAS - RESET TOTAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
@@ -13,12 +13,12 @@
         .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
         .nombre { font-size: 1.1em; margin: 5px 0; color: #e9edef; }
         
-        .admin-panel { margin-top: 40px; padding: 20px; border: 2px dashed #333; border-radius: 15px; background: #161d22; }
-        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; padding: 10px; box-sizing: border-box; font-family: monospace; }
+        .admin-panel { margin-top: 40px; padding: 20px; border: 2px dashed #ff3b30; border-radius: 15px; background: #1c1111; }
+        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; padding: 10px; box-sizing: border-box; }
         .btn { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
         .btn-red { background: #ff3b30; color: white; }
         .btn-green { background: #00a884; color: white; }
-        #status { font-size: 13px; color: #00a884; margin-top: 5px; font-weight: bold; }
+        #status { font-size: 13px; color: #ff3b30; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -31,16 +31,17 @@
 <div id="lista"></div>
 
 <div class="admin-panel">
-    <h4 style="margin:0;">⚙️ PANEL DE CARGA</h4>
-    <button class="btn btn-red" onclick="window.borrarTodo()">1. BORRAR TODO (REINICIO)</button>
-    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
-    <button class="btn btn-green" onclick="window.cargarDatos()">2. CARGAR (SIN DUPLICADOS)</button>
-    <div id="status">Estado: En espera</div>
+    <h4 style="margin:0; color: #ff3b30;">⚠️ REINICIO DE EMERGENCIA</h4>
+    <p style="font-size: 11px; color: #8696a0;">Usa el botón rojo para vaciar TODO antes de cargar.</p>
+    <button class="btn btn-red" onclick="window.resetAbsoluto()">BORRAR TODA LA BASE DE DATOS</button>
+    <textarea id="csv-input" placeholder="Pega el CSV aquí..."></textarea>
+    <button class="btn btn-green" onclick="window.cargarLimpio()">CARGAR DATOS NUEVOS</button>
+    <div id="status">Estado: Listo</div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -58,72 +59,77 @@
     let datosLocales = [];
 
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        datosLocales = snap.docs.map(d => d.data());
-        renderizar(datosLocales);
-    });
-
-    function renderizar(datos) {
         const listado = document.getElementById('lista');
         listado.innerHTML = "";
-        datos.forEach(i => {
+        datosLocales = [];
+
+        snap.forEach(docSnap => {
+            const i = docSnap.data();
+            // Evitamos duplicados visuales comparando IDs si fuera necesario
+            datosLocales.push(i);
             const div = document.createElement('div');
             div.className = 'card';
             div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
             listado.appendChild(div);
         });
-    }
+    });
 
     document.getElementById('buscador').oninput = (e) => {
         const t = e.target.value.toLowerCase();
-        renderizar(datosLocales.filter(i => i.uf.includes(t) || i.prop.toLowerCase().includes(t)));
+        const filtrados = datosLocales.filter(i => i.uf.includes(t) || i.prop.toLowerCase().includes(t));
+        const listado = document.getElementById('lista');
+        listado.innerHTML = "";
+        filtrados.forEach(i => {
+            const div = document.createElement('div');
+            div.className = 'card';
+            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
+            listado.appendChild(div);
+        });
     };
 
-    window.borrarTodo = async () => {
-        if(!confirm("¿Borrar toda la base?")) return;
+    // FUNCIÓN DE BORRADO TOTAL REAL
+    window.resetAbsoluto = async () => {
+        if(!confirm("¿SEGURO? Se borrará TODO de la nube para eliminar duplicados.")) return;
+        document.getElementById('status').innerText = "BORRANDO... ESPERE";
         const snap = await getDocs(colRef);
-        const batch = writeBatch(db);
-        snap.forEach(d => batch.delete(d.ref));
-        await batch.commit();
-        alert("Base vacía.");
+        
+        // Borramos uno por uno para asegurar que no quede NADA
+        for (const d of snap.docs) {
+            await deleteDoc(doc(db, "cocheras_edificio", d.id));
+        }
+        
+        alert("Base de datos TOTALMENTE vacía. Ya no deberían quedar duplicados.");
+        document.getElementById('status').innerText = "Base vacía.";
     };
 
-    window.cargarDatos = async () => {
+    window.cargarLimpio = async () => {
         const input = document.getElementById('csv-input');
         const texto = input.value.trim();
-        if(!texto) return alert("Pega los datos.");
+        if(!texto) return alert("Pega los datos");
 
         const status = document.getElementById('status');
         const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
         
-        status.innerText = "Filtrando duplicados...";
-        
         try {
             let batch = writeBatch(db);
-            let ufsProcesadas = new Set(); // El "colador" de duplicados
+            let ufsYaVistas = new Set();
             let contador = 0;
 
             for (let f of lineas) {
                 if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
-                
                 const c = f.split(',');
                 let ufRaw = String(c || "").replace(/[^0-9]/g, '');
                 if(!ufRaw) continue;
 
                 let ufID = ufRaw.padStart(4, '0');
-
-                // --- SI YA PROCESAMOS ESTA UF EN ESTA CARGA, LA SALTAMOS ---
-                if (ufsProcesadas.has(ufID)) continue; 
-                ufsProcesadas.add(ufID);
+                if(ufsYaVistas.has(ufID)) continue;
+                ufsYaVistas.add(ufID);
 
                 let prop = String(c || "S/D").trim();
                 let inq = String(c || "").trim();
+                let cocheraFinal = inq ? inq.split(' ').pop() : ufRaw;
 
-                let cocheraFinal = ufRaw;
-                if(inq) {
-                    const partes = inq.split(' ');
-                    cocheraFinal = partes[partes.length - 1];
-                }
-
+                // Forzamos el ID de documento único
                 const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
                 batch.set(docRef, {
                     uf: ufID,
@@ -135,12 +141,10 @@
                 contador++;
             }
 
-            status.innerText = "Enviando a la nube...";
             await batch.commit();
-            alert("¡ÉXITO! " + contador + " registros únicos cargados.");
+            alert("Carga terminada. Registros únicos: " + contador);
             input.value = "";
-            status.innerText = "Listo.";
-
+            status.innerText = "Sincronizado correctamente.";
         } catch (e) {
             alert("Error: " + e.message);
         }

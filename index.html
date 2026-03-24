@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - CARGA FINAL</title>
+    <title>SISTEMA COCHERAS - LIMPIEZA TOTAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
         .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
-        .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 10px; color: white; font-size: 16px; box-sizing: border-box; }
+        .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; }
         #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
         .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; }
         .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
@@ -32,15 +32,15 @@
 
 <div class="admin-panel">
     <h4 style="margin:0;">⚙️ PANEL DE CARGA</h4>
-    <button class="btn btn-red" onclick="window.borrarTodo()">1. LIMPIAR NUBE</button>
+    <button class="btn btn-red" onclick="window.borrarTodo()">1. BORRAR TODO (REINICIO)</button>
     <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
-    <button class="btn btn-green" onclick="window.cargarDatos()">2. CARGAR TODO AHORA</button>
+    <button class="btn btn-green" onclick="window.cargarDatos()">2. CARGAR (SIN DUPLICADOS)</button>
     <div id="status">Estado: En espera</div>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, writeBatch, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
@@ -68,11 +68,7 @@
         datos.forEach(i => {
             const div = document.createElement('div');
             div.className = 'card';
-            div.innerHTML = `
-                <div class="uf-tag">UF ${i.uf}</div>
-                <div class="nombre">${i.prop}</div>
-                <div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>
-            `;
+            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
             listado.appendChild(div);
         });
     }
@@ -83,13 +79,12 @@
     };
 
     window.borrarTodo = async () => {
-        if(!confirm("¿Borrar todo?")) return;
-        document.getElementById('status').innerText = "Vaciando...";
+        if(!confirm("¿Borrar toda la base?")) return;
         const snap = await getDocs(colRef);
         const batch = writeBatch(db);
         snap.forEach(d => batch.delete(d.ref));
         await batch.commit();
-        alert("Base limpia.");
+        alert("Base vacía.");
     };
 
     window.cargarDatos = async () => {
@@ -100,22 +95,26 @@
         const status = document.getElementById('status');
         const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
         
-        status.innerText = "Subiendo...";
+        status.innerText = "Filtrando duplicados...";
         
         try {
             let batch = writeBatch(db);
+            let ufsProcesadas = new Set(); // El "colador" de duplicados
             let contador = 0;
 
             for (let f of lineas) {
                 if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
                 
                 const c = f.split(',');
-                
-                // --- PROTECCIÓN AQUÍ: Forzamos String para evitar error de trim ---
                 let ufRaw = String(c || "").replace(/[^0-9]/g, '');
                 if(!ufRaw) continue;
 
                 let ufID = ufRaw.padStart(4, '0');
+
+                // --- SI YA PROCESAMOS ESTA UF EN ESTA CARGA, LA SALTAMOS ---
+                if (ufsProcesadas.has(ufID)) continue; 
+                ufsProcesadas.add(ufID);
+
                 let prop = String(c || "S/D").trim();
                 let inq = String(c || "").trim();
 
@@ -136,8 +135,9 @@
                 contador++;
             }
 
+            status.innerText = "Enviando a la nube...";
             await batch.commit();
-            alert("¡ÉXITO! " + contador + " registros.");
+            alert("¡ÉXITO! " + contador + " registros únicos cargados.");
             input.value = "";
             status.innerText = "Listo.";
 

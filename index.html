@@ -3,10 +3,10 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - FIX FINAL</title>
+    <title>SISTEMA COCHERAS - 87 UNIDADES</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 20px; }
-        textarea { width: 100%; min-height: 150px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
+        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
         .row { display: flex; gap: 12px; margin: 15px 0; }
         button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
         .danger { background: #ff3b30; color: white; }
@@ -15,25 +15,27 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; font-size: 14px; }
         th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; }
         th { background: #202c33; color: #00a884; }
+        .inq-text { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
+        .prop-text { font-weight: bold; color: #e9edef; }
     </style>
 </head>
 <body>
 
-    <h3>🚗 Carga Directa (87 Unidades)</h3>
-    <div id="status">Estado: Listo para recibir datos</div>
+    <h3>🏠 Gestión de Cocheras (87 UF)</h3>
+    <div id="status">Estado: Listo para cargar datos</div>
 
-    <textarea id="csv-input" placeholder="Pegue aquí las 87 líneas del CSV..."></textarea>
+    <textarea id="csv-input" placeholder="Pega aquí las 87 líneas..."></textarea>
 
     <div class="row">
-        <button class="primary" onclick="window.cargar()">Subir Datos Ahora</button>
-        <button class="danger" onclick="window.limpiar()">Limpiar Todo</button>
+        <button class="primary" onclick="window.cargar()">Subir Datos</button>
+        <button class="danger" onclick="window.limpiar()">Borrar Todo</button>
     </div>
 
     <table>
         <thead>
             <tr>
                 <th>UF</th>
-                <th>Información</th>
+                <th>Habitante (Prop / Inq)</th>
                 <th>Cochera</th>
             </tr>
         </thead>
@@ -57,73 +59,78 @@
         const db = getFirestore(app);
         const colRef = collection(db, "cocheras_edificio");
 
-        // FUNCIÓN CARGAR (SIN .REPLACE ERRÓNEO)
         window.cargar = async () => {
             const area = document.getElementById("csv-input");
             const texto = area.value.trim();
-            if(!texto) return alert("El cuadro está vacío.");
+            if(!texto) return alert("Pega los datos primero.");
 
             const status = document.getElementById("status");
-            status.innerText = "⏳ Procesando... por favor espere";
+            status.innerText = "⌛ Procesando...";
 
             const lineas = texto.split("\n");
             const batch = writeBatch(db);
             let contador = 0;
 
-            try {
-                lineas.forEach(linea => {
+            lineas.forEach(linea => {
+                try {
                     const columnas = linea.split(",");
                     if (columnas.length >= 2) {
-                        // Extraemos la UF limpiando solo ese texto específico
                         let ufRaw = columnas.toString().replace(/[^0-9]/g, '');
                         
                         if (ufRaw && ufRaw.length <= 4) {
                             let ufID = ufRaw.padStart(4, '0');
-                            let restoInfo = columnas.slice(1).join(" ").trim();
+                            
+                            // Separamos Propietario e Inquilino
+                            // Propietario suele ser la columna 2, Inquilino la 4. 
+                            let prop = (columnas || "S/D").trim();
+                            let inq = (columnas || "").trim();
                             
                             const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
                             batch.set(docRef, {
                                 uf: ufID,
-                                prop: restoInfo || "Sin Nombre",
+                                prop: prop,
+                                inquilino: inq,
                                 cochera: ufRaw,
                                 patente: ""
                             }, { merge: true });
                             contador++;
                         }
                     }
-                });
+                } catch (e) {
+                    console.log("Error en línea: ", linea);
+                }
+            });
 
-                await batch.commit();
-                status.style.color = "#00a884";
-                status.innerText = "✅ ¡Éxito! Se cargaron " + contador + " unidades correctamente.";
-                area.value = "";
-            } catch (err) {
-                console.error(err);
-                status.style.color = "#ff3b30";
-                status.innerText = "❌ Error: " + err.message;
-            }
+            await batch.commit();
+            status.innerText = "✅ ¡Listo! " + contador + " unidades procesadas.";
+            area.value = "";
         };
 
-        // FUNCIÓN BORRAR
         window.limpiar = async () => {
-            if(!confirm("¿Seguro que quieres borrar TODA la lista?")) return;
-            const status = document.getElementById("status");
-            status.innerText = "🗑️ Borrando base de datos...";
+            if(!confirm("¿Borrar todo?")) return;
             const snap = await getDocs(colRef);
             const batch = writeBatch(db);
             snap.forEach(d => batch.delete(d.ref));
             await batch.commit();
-            status.innerText = "✅ Base de datos vaciada.";
         };
 
-        // VISOR EN TIEMPO REAL
         onSnapshot(query(colRef, orderBy("uf")), (snap) => {
             const tbody = document.getElementById("tbody");
             tbody.innerHTML = "";
             snap.forEach(d => {
-                const i = d.data();
+                const data = d.data();
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${i.uf}</td><td>${i.prop}</td><td>${i.cochera}</td>`;
+                
+                let habitanteHTML = `<span class="prop-text">${data.prop}</span>`;
+                if(data.inquilino) {
+                    habitanteHTML += `<span class="inq-text">🏠 Inquilino: ${data.inquilino}</span>`;
+                }
+
+                tr.innerHTML = `
+                    <td style="color:#00a884; font-weight:bold;">🏠 ${data.uf}</td>
+                    <td>${habitanteHTML}</td>
+                    <td>${data.cochera}</td>
+                `;
                 tbody.appendChild(tr);
             });
         });

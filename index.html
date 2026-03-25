@@ -3,38 +3,37 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - CARGA 87</title>
+    <title>SISTEMA COCHERAS - FIX FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 20px; }
-        textarea { width: 100%; min-height: 150px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        textarea { width: 100%; min-height: 150px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
         .row { display: flex; gap: 12px; margin: 15px 0; }
         button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
         .danger { background: #ff3b30; color: white; }
         .primary { background: #00a884; color: white; }
+        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; }
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; font-size: 14px; }
         th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; }
         th { background: #202c33; color: #00a884; }
-        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
-
 <body>
-    <h3>🚗 Carga de 87 Unidades</h3>
-    
-    <div id="status">Estado: Listo para cargar</div>
 
-    <textarea id="csv-input" placeholder="Pega las 87 líneas aquí..."></textarea>
+    <h3>🚗 Carga Directa (87 Unidades)</h3>
+    <div id="status">Estado: Listo para recibir datos</div>
+
+    <textarea id="csv-input" placeholder="Pegue aquí las 87 líneas del CSV..."></textarea>
 
     <div class="row">
-        <button class="primary" onclick="window.cargar()">SUBIR DATOS</button>
-        <button class="danger" onclick="window.limpiar()">BORRAR TODO</button>
+        <button class="primary" onclick="window.cargar()">Subir Datos Ahora</button>
+        <button class="danger" onclick="window.limpiar()">Limpiar Todo</button>
     </div>
 
     <table>
         <thead>
             <tr>
                 <th>UF</th>
-                <th>Datos</th>
+                <th>Información</th>
                 <th>Cochera</th>
             </tr>
         </thead>
@@ -58,63 +57,73 @@
         const db = getFirestore(app);
         const colRef = collection(db, "cocheras_edificio");
 
-        // --- FUNCIÓN CARGAR ---
+        // FUNCIÓN CARGAR (SIN .REPLACE ERRÓNEO)
         window.cargar = async () => {
-            const txt = document.getElementById("csv-input").value.trim();
-            if(!txt) return alert("Pega los datos");
+            const area = document.getElementById("csv-input");
+            const texto = area.value.trim();
+            if(!texto) return alert("El cuadro está vacío.");
 
             const status = document.getElementById("status");
-            status.innerText = "Cargando...";
+            status.innerText = "⏳ Procesando... por favor espere";
 
-            const lineas = txt.split("\n");
+            const lineas = texto.split("\n");
             const batch = writeBatch(db);
             let contador = 0;
 
-            lineas.forEach(linea => {
-                const columnas = linea.split(",");
-                if(columnas.length >= 2) {
-                    // Limpiamos solo la UF
-                    let ufOriginal = columnas.replace(/[^0-9]/g, '');
-                    if(ufOriginal && ufOriginal.length <= 4) {
-                        let ufID = ufOriginal.padStart(4, '0');
-                        // El resto de la línea lo tomamos como nombre directamente
-                        let info = columnas.slice(1).join(" ").trim();
+            try {
+                lineas.forEach(linea => {
+                    const columnas = linea.split(",");
+                    if (columnas.length >= 2) {
+                        // Extraemos la UF limpiando solo ese texto específico
+                        let ufRaw = columnas.toString().replace(/[^0-9]/g, '');
                         
-                        const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                        batch.set(docRef, {
-                            uf: ufID,
-                            prop: info || "S/D",
-                            cochera: ufOriginal,
-                            patente: ""
-                        });
-                        contador++;
+                        if (ufRaw && ufRaw.length <= 4) {
+                            let ufID = ufRaw.padStart(4, '0');
+                            let restoInfo = columnas.slice(1).join(" ").trim();
+                            
+                            const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
+                            batch.set(docRef, {
+                                uf: ufID,
+                                prop: restoInfo || "Sin Nombre",
+                                cochera: ufRaw,
+                                patente: ""
+                            }, { merge: true });
+                            contador++;
+                        }
                     }
-                }
-            });
+                });
 
-            await batch.commit();
-            status.innerText = "¡Listo! " + contador + " registros cargados.";
-            document.getElementById("csv-input").value = "";
+                await batch.commit();
+                status.style.color = "#00a884";
+                status.innerText = "✅ ¡Éxito! Se cargaron " + contador + " unidades correctamente.";
+                area.value = "";
+            } catch (err) {
+                console.error(err);
+                status.style.color = "#ff3b30";
+                status.innerText = "❌ Error: " + err.message;
+            }
         };
 
-        // --- FUNCIÓN BORRAR ---
+        // FUNCIÓN BORRAR
         window.limpiar = async () => {
-            if(!confirm("¿Borrar todo?")) return;
+            if(!confirm("¿Seguro que quieres borrar TODA la lista?")) return;
+            const status = document.getElementById("status");
+            status.innerText = "🗑️ Borrando base de datos...";
             const snap = await getDocs(colRef);
             const batch = writeBatch(db);
             snap.forEach(d => batch.delete(d.ref));
             await batch.commit();
-            document.getElementById("status").innerText = "Base vacía.";
+            status.innerText = "✅ Base de datos vaciada.";
         };
 
-        // --- ESCUCHA EN VIVO ---
+        // VISOR EN TIEMPO REAL
         onSnapshot(query(colRef, orderBy("uf")), (snap) => {
             const tbody = document.getElementById("tbody");
             tbody.innerHTML = "";
             snap.forEach(d => {
-                const data = d.data();
+                const i = d.data();
                 const tr = document.createElement("tr");
-                tr.innerHTML = `<td>${data.uf}</td><td>${data.prop}</td><td>${data.cochera}</td>`;
+                tr.innerHTML = `<td>${i.uf}</td><td>${i.prop}</td><td>${i.cochera}</td>`;
                 tbody.appendChild(tr);
             });
         });

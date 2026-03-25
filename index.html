@@ -1,140 +1,155 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GESTIÓN COCHERAS - FIX FINAL</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SISTEMA COCHERAS - IMPORTADOR FINAL</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 15px; }
-        .header { position: sticky; top: 0; background: #0b141a; padding: 10px 0; z-index: 100; border-bottom: 1px solid #2a3942; }
-        .search-box { width: 100%; padding: 12px; background: #202c33; border: 1px solid #2a3942; border-radius: 8px; color: white; font-size: 16px; box-sizing: border-box; }
-        #lista { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .card { background: #111b21; padding: 15px; border-radius: 10px; border-left: 5px solid #00a884; }
-        .uf-tag { color: #00a884; font-weight: bold; font-size: 0.9em; }
-        .nombre { font-size: 1.1em; margin: 5px 0; color: #e9edef; }
-        .admin-panel { margin-top: 40px; padding: 20px; border: 2px dashed #444; border-radius: 15px; background: #161d22; }
-        textarea { width: 100%; height: 100px; background: #000; color: #0f0; border: 1px solid #444; margin: 10px 0; padding: 10px; box-sizing: border-box; }
-        .btn { padding: 15px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; font-size: 14px; text-transform: uppercase; }
-        .btn-red { background: #ff3b30; color: white; }
-        .btn-green { background: #00a884; color: white; }
+        body { background: #0b141a; color: white; font-family: system-ui, sans-serif; margin: 20px; }
+        textarea { width: 100%; min-height: 150px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
+        .row { display: flex; gap: 12px; margin: 15px 0; }
+        button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; }
+        .danger { background: #ff3b30; color: white; }
+        .primary { background: #00a884; color: white; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; }
+        th, td { border: 1px solid #2a3942; padding: 12px; text-align: left; }
+        th { background: #202c33; color: #00a884; }
+        .status { color: #8696a0; font-size: 14px; margin-top: 5px; }
+        .warn { background: #3b2a00; border: 1px solid #ffd27a; padding: 10px; margin: 10px 0; border-radius: 8px; color: #ffd27a; }
     </style>
 </head>
+
 <body>
+    <h1>🚗 Importador de Cocheras</h1>
+    <p style="color:#8696a0">Pega el CSV abajo. Si hay errores, el sistema los filtrará automáticamente.</p>
 
-<div class="header">
-    <h3 style="margin:0 0 10px 0;">Cocheras Edificio</h3>
-    <input type="text" id="buscador" class="search-box" placeholder="🔎 Buscar UF o Nombre...">
-</div>
+    <textarea id="csv-input" placeholder="Pegue los datos aquí..."></textarea>
 
-<div id="lista"></div>
+    <div class="row">
+        <button class="primary" id="btn-cargar">CARGAR / ACTUALIZAR</button>
+        <button class="danger" id="btn-limpiar">BORRAR TODA LA BASE</button>
+    </div>
 
-<div class="admin-panel">
-    <h4 style="margin:0;">⚙️ PANEL DE CONTROL</h4>
-    <button class="btn btn-red" onclick="window.resetTotal()">1. LIMPIAR TODO</button>
-    <textarea id="csv-input" placeholder="Pega el CSV aquí..."></textarea>
-    <button class="btn btn-green" onclick="window.cargarSeguro()">2. CARGAR SIN DUPLICADOS</button>
-</div>
+    <div id="status" class="status"></div>
+    <div id="warnings"></div>
 
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy, doc, getDocs, deleteDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <h2>Registros en la Nube</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>UF</th>
+                <th>Nombre Completo</th>
+                <th>Cochera</th>
+                <th>ID Documento</th>
+            </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+    </table>
 
-    const config = { 
-        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
-        authDomain: "gestionuf-remoto.firebaseapp.com", 
-        projectId: "gestionuf-remoto", 
-        storageBucket: "gestionuf-remoto.firebasestorage.app", 
-        messagingSenderId: "724452752860", 
-        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
-    };
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const app = initializeApp(config);
-    const db = getFirestore(app);
-    const colRef = collection(db, "cocheras_edificio");
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo",
+            authDomain: "gestionuf-remoto.firebaseapp.com",
+            projectId: "gestionuf-remoto",
+            storageBucket: "gestionuf-remoto.firebasestorage.app",
+            messagingSenderId: "724452752860",
+            appId: "1:724452752860:web:4d25585addcdcbd146e319"
+        };
 
-    let datosLocales = [];
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const colRef = collection(db, "cocheras_edificio");
 
-    // --- VISUALIZACIÓN ---
-    onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        const listado = document.getElementById('lista');
-        listado.innerHTML = "";
-        datosLocales = [];
-        let control = new Set();
+        // --- CARGAR DATOS ---
+        async function cargarDatos() {
+            const input = document.getElementById("csv-input");
+            const texto = input.value.trim();
+            if (!texto) return alert("Pega los datos primero.");
 
-        snap.forEach(d => {
-            const i = d.data();
-            if(control.has(i.uf)) return; 
-            control.add(i.uf);
-            datosLocales.push(i);
+            const status = document.getElementById("status");
+            status.textContent = "Procesando...";
 
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
-            listado.appendChild(div);
-        });
-    });
+            const lineas = texto.split(/\r?\n/);
+            let procesados = 0;
+            let saltados = 0;
 
-    // --- FUNCIÓN DE LIMPIEZA PROFUNDA ---
-    window.resetTotal = async () => {
-        if(!confirm("¿Borrar todo?")) return;
-        const snap = await getDocs(colRef);
-        for (const d of snap.docs) { await deleteDoc(doc(db, "cocheras_edificio", d.id)); }
-        alert("Nube vaciada. La lista debe quedar limpia.");
-        location.reload(); 
-    };
+            for (let linea of lineas) {
+                if (linea.toUpperCase().includes("UF,PROPIETARIO") || !linea.includes(',')) continue;
 
-    // --- FUNCIÓN DE CARGA INTELIGENTE ---
-    window.cargarSeguro = async () => {
-        const texto = document.getElementById('csv-input').value.trim();
-        if(!texto) return alert("Pega los datos");
+                const columnas = linea.split(',');
+                
+                // Limpieza de UF: solo números, max 4 dígitos
+                let ufNum = columnas.replace(/[^0-9]/g, '');
+                if (!ufNum || ufNum.length > 4) { saltados++; continue; }
 
-        const lineas = texto.split(/\r?\n/).filter(l => l.includes(','));
-        let procesadas = 0;
+                let ufID = ufNum.padStart(4, '0');
+                
+                // Unimos el resto de las columnas por si el nombre tenía comas adentro
+                let resto = columnas.slice(1).join(' ').replace(/,,+/g, ',').trim();
 
-        for (let f of lineas) {
-            if (f.toUpperCase().includes("UF,PROPIETARIO")) continue;
-            const c = f.split(',');
-            
-            // 1. Extraer solo el número de UF (limpia teléfonos y basura)
-            let ufLimpia = String(c || "").replace(/[^0-9]/g, '');
-            if(!ufLimpia || ufLimpia.length > 4) continue; // Si es más largo que 4, es un teléfono, no una UF
+                // Guardamos con ID Determinístico (UF-0001) para que NUNCA se duplique
+                await setDoc(doc(db, "cocheras_edificio", "UF-" + ufID), {
+                    uf: ufID,
+                    prop: resto,
+                    cochera: ufNum,
+                    patente: ""
+                }, { merge: true });
 
-            let ufID = ufLimpia.padStart(4, '0');
-            let prop = String(c || "S/D").trim();
-            let inq = String(c || "").trim();
+                procesados++;
+            }
 
-            // 2. Limpiar nombre para que no se repita el propietario si el inquilino es igual
-            let nombreFinal = inq ? prop + " / " + inq : prop;
-
-            // 3. ID DE COCHERA: Siempre igual a la UF para evitar números de 15 cifras
-            let cocheraID = ufLimpia; 
-
-            // 4. GUARDAR CON ID FIJO "UF-XXXX"
-            await setDoc(doc(db, "cocheras_edificio", "UF-" + ufID), {
-                uf: ufID,
-                prop: nombreFinal,
-                cochera: cocheraID,
-                patente: ""
-            });
-            procesadas++;
+            status.innerHTML = `<b style="color:#00a884">¡Éxito!</b> Cargados: ${procesados} | Saltados: ${saltados}`;
+            input.value = "";
         }
-        alert("Cargados " + procesadas + " registros únicos.");
-        document.getElementById('csv-input').value = "";
-    };
 
-    // --- BUSCADOR ---
-    document.getElementById('buscador').oninput = (e) => {
-        const t = e.target.value.toLowerCase();
-        const filtrados = datosLocales.filter(i => i.uf.includes(t) || i.prop.toLowerCase().includes(t));
-        const listado = document.getElementById('lista');
-        listado.innerHTML = "";
-        filtrados.forEach(i => {
-            const div = document.createElement('div');
-            div.className = 'card';
-            div.innerHTML = `<div class="uf-tag">UF ${i.uf}</div><div class="nombre">${i.prop}</div><div style="color:#8696a0; font-size:0.9em;">Cochera: <b>${i.cochera}</b></div>`;
-            listado.appendChild(div);
+        // --- BORRAR TODO ---
+        async function limpiarTodo() {
+            if (!confirm("¿Seguro? Esto vacía la nube por completo.")) return;
+            const status = document.getElementById("status");
+            status.textContent = "Borrando base de datos...";
+            const snap = await getDocs(colRef);
+            for (const d of snap.docs) { await deleteDoc(d.ref); }
+            status.textContent = "Base vaciada con éxito.";
+        }
+
+        // --- ESCUCHA EN VIVO ---
+        onSnapshot(query(colRef, orderBy("uf")), (snap) => {
+            const tbody = document.getElementById("tbody");
+            const warnings = document.getElementById("warnings");
+            tbody.innerHTML = "";
+            warnings.innerHTML = "";
+
+            let ufsVistas = new Map();
+
+            snap.forEach(d => {
+                const data = d.data();
+                const uf = data.uf;
+
+                // Detectar si hay duplicados (por IDs viejos)
+                ufsVistas.set(uf, (ufsVistas.get(uf) || 0) + 1);
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td>${uf}</td>
+                    <td>${data.prop}</td>
+                    <td>${data.cochera}</td>
+                    <td style="color:#555; font-size:11px;">${d.id}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Mostrar alerta de duplicados si existen registros viejos
+            const duplicados = [...ufsVistas.entries()].filter(x => x > 1);
+            if (duplicados.length > 0) {
+                warnings.innerHTML = `<div class="warn">⚠️ <b>Atención:</b> Hay registros viejos duplicados. Pulsa "BORRAR TODA LA BASE" y carga de nuevo.</div>`;
+            }
         });
-    };
-</script>
+
+        document.getElementById("btn-cargar").onclick = cargarDatos;
+        document.getElementById("btn-limpiar").onclick = limpiarTodo;
+    </script>
 </body>
 </html>

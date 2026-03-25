@@ -3,34 +3,35 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - CARGA 87</title>
+    <title>SISTEMA COCHERAS - CARGA</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 70px; }
+        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 80px; }
         
-        /* BOTÓN VOLVER AL HUB (LA CASITA) */
-        .btn-hub { 
+        /* EL BOTÓN DE LA CASITA (PARA VOLVER AL HUB) */
+        .btn-home { 
             position: fixed; top: 15px; left: 15px; background: #202c33; color: #00a884; 
-            padding: 10px 15px; border-radius: 50%; text-decoration: none; font-size: 24px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 1000; border: 1px solid #2a3942;
+            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; 
+            justify-content: center; text-decoration: none; font-size: 24px; border: 1px solid #2a3942;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000;
         }
 
-        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
+        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
         .row { display: flex; gap: 12px; margin: 15px 0; }
         button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
         .danger { background: #ff3b30; color: white; }
         .primary { background: #00a884; color: white; }
-        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; padding: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; font-size: 14px; }
-        th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; }
+        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; }
+        th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; font-size: 14px; }
         th { background: #202c33; color: #00a884; }
-        .inq-label { color: #8696a0; font-size: 0.8em; display: block; }
+        .inq { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="btn-hub" title="Volver al Menú">🏠</a>
+    <a href="index.html" class="btn-home">🏠</a>
 
-    <h3>Carga de Datos (87 UF)</h3>
+    <h3>Carga de 87 Unidades</h3>
     <div id="status">Estado: Esperando datos...</div>
 
     <textarea id="csv-input" placeholder="Pega aquí tus 87 líneas..."></textarea>
@@ -44,7 +45,7 @@
         <thead>
             <tr>
                 <th>UF</th>
-                <th>Propietario / Inquilino</th>
+                <th>Habitante (Prop / Inq)</th>
                 <th>Cochera</th>
             </tr>
         </thead>
@@ -74,24 +75,21 @@
             if(!texto) return alert("Pega los datos");
 
             const status = document.getElementById("status");
-            status.innerText = "Procesando...";
+            status.innerText = "⌛ Procesando...";
 
             const lineas = texto.split("\n");
             const batch = writeBatch(db);
             let contador = 0;
 
             lineas.forEach(linea => {
-                // Separamos por COMA o por TABULACIÓN (por si viene de Excel)
-                const columnas = linea.split(/[,	]/); 
+                const columnas = linea.split(",");
+                // Buscamos el número de UF
+                let encontroNumero = linea.match(/\d+/);
                 
-                // Buscamos el primer número que aparezca en la línea para la UF
-                let ufRaw = linea.match(/\d+/); 
-                
-                if (ufRaw) {
-                    let numUF = ufRaw;
-                    let ufID = numUF.padStart(4, '0');
+                if (encontroNumero) {
+                    let numTexto = String(encontroNumero); // Forzamos a que sea texto
+                    let ufID = numTexto.padStart(4, '0');
                     
-                    // Intentamos separar nombres (asumiendo formato estándar)
                     let prop = (columnas || "S/D").trim();
                     let inq = (columnas || "").trim();
 
@@ -100,7 +98,7 @@
                         uf: ufID,
                         prop: prop,
                         inquilino: inq,
-                        cochera: numUF,
+                        cochera: numTexto,
                         patente: ""
                     }, { merge: true });
                     contador++;
@@ -109,15 +107,15 @@
 
             try {
                 await batch.commit();
-                status.innerText = "¡Listo! Se procesaron " + contador + " unidades.";
+                status.innerText = "✅ ¡Listo! " + contador + " unidades procesadas.";
                 area.value = "";
             } catch (e) {
-                status.innerText = "Error al subir: " + e.message;
+                status.innerText = "❌ Error: " + e.message;
             }
         };
 
         window.limpiar = async () => {
-            if(!confirm("¿Borrar base de datos?")) return;
+            if(!confirm("¿Borrar todo?")) return;
             const snap = await getDocs(colRef);
             const batch = writeBatch(db);
             snap.forEach(d => batch.delete(d.ref));
@@ -134,7 +132,7 @@
                     <td><b>${i.uf}</b></td>
                     <td>
                         <b>${i.prop}</b>
-                        ${i.inquilino ? '<span class="inq-label">Inq: ' + i.inquilino + '</span>' : ''}
+                        ${i.inquilino ? '<span class="inq">Inq: ' + i.inquilino + '</span>' : ''}
                     </td>
                     <td>${i.cochera}</td>
                 `;

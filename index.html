@@ -3,11 +3,11 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - CARGA</title>
+    <title>SISTEMA COCHERAS - CARGA FINAL</title>
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 80px; }
         
-        /* EL BOTÓN DE LA CASITA (PARA VOLVER AL HUB) */
+        /* BOTÓN CASITA (HOME) */
         .btn-home { 
             position: fixed; top: 15px; left: 15px; background: #202c33; color: #00a884; 
             width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; 
@@ -15,30 +15,30 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000;
         }
 
-        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
         .row { display: flex; gap: 12px; margin: 15px 0; }
         button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
         .danger { background: #ff3b30; color: white; }
         .primary { background: #00a884; color: white; }
         #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; width: 100%; }
         th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; font-size: 14px; }
         th { background: #202c33; color: #00a884; }
-        .inq { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
+        .inq-sub { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
     </style>
 </head>
 <body>
 
     <a href="index.html" class="btn-home">🏠</a>
 
-    <h3>Carga de 87 Unidades</h3>
+    <h3>Carga Masiva (87 UF)</h3>
     <div id="status">Estado: Esperando datos...</div>
 
-    <textarea id="csv-input" placeholder="Pega aquí tus 87 líneas..."></textarea>
+    <textarea id="csv-input" placeholder="Pega aquí las 87 líneas del CSV..."></textarea>
 
     <div class="row">
         <button class="primary" onclick="window.cargar()">Subir Datos</button>
-        <button class="danger" onclick="window.limpiar()">Borrar Todo</button>
+        <button class="danger" onclick="window.limpiar()">Limpiar Todo</button>
     </div>
 
     <table>
@@ -75,7 +75,7 @@
             if(!texto) return alert("Pega los datos");
 
             const status = document.getElementById("status");
-            status.innerText = "⌛ Procesando...";
+            status.innerText = "⌛ Procesando de forma segura...";
 
             const lineas = texto.split("\n");
             const batch = writeBatch(db);
@@ -83,22 +83,23 @@
 
             lineas.forEach(linea => {
                 const columnas = linea.split(",");
-                // Buscamos el número de UF
-                let encontroNumero = linea.match(/\d+/);
+                // Buscar número de UF
+                let encontroUF = linea.match(/\d+/);
                 
-                if (encontroNumero) {
-                    let numTexto = String(encontroNumero); // Forzamos a que sea texto
-                    let ufID = numTexto.padStart(4, '0');
+                if (encontroUF) {
+                    let ufNum = String(encontroUF);
+                    let ufID = ufNum.padStart(4, '0');
                     
-                    let prop = (columnas || "S/D").trim();
-                    let inq = (columnas || "").trim();
+                    // Manejo seguro de columnas para evitar error de "trim"
+                    let prop = columnas ? String(columnas).trim() : "S/D";
+                    let inq = columnas ? String(columnas).trim() : "";
 
                     const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
                     batch.set(docRef, {
                         uf: ufID,
                         prop: prop,
                         inquilino: inq,
-                        cochera: numTexto,
+                        cochera: ufNum,
                         patente: ""
                     }, { merge: true });
                     contador++;
@@ -107,15 +108,15 @@
 
             try {
                 await batch.commit();
-                status.innerText = "✅ ¡Listo! " + contador + " unidades procesadas.";
+                status.innerText = "✅ ¡Éxito! Se cargaron " + contador + " unidades.";
                 area.value = "";
             } catch (e) {
-                status.innerText = "❌ Error: " + e.message;
+                status.innerText = "❌ Error en la subida: " + e.message;
             }
         };
 
         window.limpiar = async () => {
-            if(!confirm("¿Borrar todo?")) return;
+            if(!confirm("¿Borrar toda la base de datos?")) return;
             const snap = await getDocs(colRef);
             const batch = writeBatch(db);
             snap.forEach(d => batch.delete(d.ref));
@@ -126,15 +127,15 @@
             const tbody = document.getElementById("tbody");
             tbody.innerHTML = "";
             snap.forEach(d => {
-                const i = d.data();
+                const data = d.data();
                 const tr = document.createElement("tr");
                 tr.innerHTML = `
-                    <td><b>${i.uf}</b></td>
+                    <td><b>${data.uf}</b></td>
                     <td>
-                        <b>${i.prop}</b>
-                        ${i.inquilino ? '<span class="inq">Inq: ' + i.inquilino + '</span>' : ''}
+                        <b>${data.prop || 'S/D'}</b>
+                        ${data.inquilino ? '<span class="inq-sub">Inq: ' + data.inquilino + '</span>' : ''}
                     </td>
-                    <td>${i.cochera}</td>
+                    <td>${data.cochera}</td>
                 `;
                 tbody.appendChild(tr);
             });

@@ -3,9 +3,17 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - 87 UNIDADES</title>
+    <title>SISTEMA COCHERAS - CARGA 87</title>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 20px; }
+        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 70px; }
+        
+        /* BOTÓN VOLVER AL HUB (LA CASITA) */
+        .btn-hub { 
+            position: fixed; top: 15px; left: 15px; background: #202c33; color: #00a884; 
+            padding: 10px 15px; border-radius: 50%; text-decoration: none; font-size: 24px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); z-index: 1000; border: 1px solid #2a3942;
+        }
+
         textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
         .row { display: flex; gap: 12px; margin: 15px 0; }
         button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
@@ -15,16 +23,17 @@
         table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; font-size: 14px; }
         th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; }
         th { background: #202c33; color: #00a884; }
-        .inq-text { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
-        .prop-text { font-weight: bold; color: #e9edef; }
+        .inq-label { color: #8696a0; font-size: 0.8em; display: block; }
     </style>
 </head>
 <body>
 
-    <h3>🏠 Gestión de Cocheras (87 UF)</h3>
-    <div id="status">Estado: Listo para cargar datos</div>
+    <a href="index.html" class="btn-hub" title="Volver al Menú">🏠</a>
 
-    <textarea id="csv-input" placeholder="Pega aquí las 87 líneas..."></textarea>
+    <h3>Carga de Datos (87 UF)</h3>
+    <div id="status">Estado: Esperando datos...</div>
+
+    <textarea id="csv-input" placeholder="Pega aquí tus 87 líneas..."></textarea>
 
     <div class="row">
         <button class="primary" onclick="window.cargar()">Subir Datos</button>
@@ -35,7 +44,7 @@
         <thead>
             <tr>
                 <th>UF</th>
-                <th>Habitante (Prop / Inq)</th>
+                <th>Propietario / Inquilino</th>
                 <th>Cochera</th>
             </tr>
         </thead>
@@ -62,52 +71,53 @@
         window.cargar = async () => {
             const area = document.getElementById("csv-input");
             const texto = area.value.trim();
-            if(!texto) return alert("Pega los datos primero.");
+            if(!texto) return alert("Pega los datos");
 
             const status = document.getElementById("status");
-            status.innerText = "⌛ Procesando...";
+            status.innerText = "Procesando...";
 
             const lineas = texto.split("\n");
             const batch = writeBatch(db);
             let contador = 0;
 
             lineas.forEach(linea => {
-                try {
-                    const columnas = linea.split(",");
-                    if (columnas.length >= 2) {
-                        let ufRaw = columnas.toString().replace(/[^0-9]/g, '');
-                        
-                        if (ufRaw && ufRaw.length <= 4) {
-                            let ufID = ufRaw.padStart(4, '0');
-                            
-                            // Separamos Propietario e Inquilino
-                            // Propietario suele ser la columna 2, Inquilino la 4. 
-                            let prop = (columnas || "S/D").trim();
-                            let inq = (columnas || "").trim();
-                            
-                            const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                            batch.set(docRef, {
-                                uf: ufID,
-                                prop: prop,
-                                inquilino: inq,
-                                cochera: ufRaw,
-                                patente: ""
-                            }, { merge: true });
-                            contador++;
-                        }
-                    }
-                } catch (e) {
-                    console.log("Error en línea: ", linea);
+                // Separamos por COMA o por TABULACIÓN (por si viene de Excel)
+                const columnas = linea.split(/[,	]/); 
+                
+                // Buscamos el primer número que aparezca en la línea para la UF
+                let ufRaw = linea.match(/\d+/); 
+                
+                if (ufRaw) {
+                    let numUF = ufRaw;
+                    let ufID = numUF.padStart(4, '0');
+                    
+                    // Intentamos separar nombres (asumiendo formato estándar)
+                    let prop = (columnas || "S/D").trim();
+                    let inq = (columnas || "").trim();
+
+                    const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
+                    batch.set(docRef, {
+                        uf: ufID,
+                        prop: prop,
+                        inquilino: inq,
+                        cochera: numUF,
+                        patente: ""
+                    }, { merge: true });
+                    contador++;
                 }
             });
 
-            await batch.commit();
-            status.innerText = "✅ ¡Listo! " + contador + " unidades procesadas.";
-            area.value = "";
+            try {
+                await batch.commit();
+                status.innerText = "¡Listo! Se procesaron " + contador + " unidades.";
+                area.value = "";
+            } catch (e) {
+                status.innerText = "Error al subir: " + e.message;
+            }
         };
 
         window.limpiar = async () => {
-            if(!confirm("¿Borrar todo?")) return;
+            if(!confirm("¿Borrar base de datos?")) return;
             const snap = await getDocs(colRef);
             const batch = writeBatch(db);
             snap.forEach(d => batch.delete(d.ref));
@@ -118,18 +128,15 @@
             const tbody = document.getElementById("tbody");
             tbody.innerHTML = "";
             snap.forEach(d => {
-                const data = d.data();
+                const i = d.data();
                 const tr = document.createElement("tr");
-                
-                let habitanteHTML = `<span class="prop-text">${data.prop}</span>`;
-                if(data.inquilino) {
-                    habitanteHTML += `<span class="inq-text">🏠 Inquilino: ${data.inquilino}</span>`;
-                }
-
                 tr.innerHTML = `
-                    <td style="color:#00a884; font-weight:bold;">🏠 ${data.uf}</td>
-                    <td>${habitanteHTML}</td>
-                    <td>${data.cochera}</td>
+                    <td><b>${i.uf}</b></td>
+                    <td>
+                        <b>${i.prop}</b>
+                        ${i.inquilino ? '<span class="inq-label">Inq: ' + i.inquilino + '</span>' : ''}
+                    </td>
+                    <td>${i.cochera}</td>
                 `;
                 tbody.appendChild(tr);
             });

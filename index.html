@@ -3,44 +3,39 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - IMPORTADOR FINAL</title>
+    <title>SISTEMA COCHERAS - CARGA 87</title>
     <style>
-        body { background: #0b141a; color: white; font-family: system-ui, sans-serif; margin: 20px; }
-        textarea { width: 100%; min-height: 150px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
+        body { background: #0b141a; color: white; font-family: sans-serif; margin: 20px; }
+        textarea { width: 100%; min-height: 150px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
         .row { display: flex; gap: 12px; margin: 15px 0; }
-        button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; }
+        button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
         .danger { background: #ff3b30; color: white; }
         .primary { background: #00a884; color: white; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; }
-        th, td { border: 1px solid #2a3942; padding: 12px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; font-size: 14px; }
+        th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; }
         th { background: #202c33; color: #00a884; }
-        .status { color: #8696a0; font-size: 14px; margin-top: 5px; }
-        .warn { background: #3b2a00; border: 1px solid #ffd27a; padding: 10px; margin: 10px 0; border-radius: 8px; color: #ffd27a; }
+        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 
 <body>
-    <h1>🚗 Importador de Cocheras</h1>
-    <p style="color:#8696a0">Pega el CSV abajo. Si hay errores, el sistema los filtrará automáticamente.</p>
+    <h3>🚗 Carga de 87 Unidades</h3>
+    
+    <div id="status">Estado: Listo para cargar</div>
 
-    <textarea id="csv-input" placeholder="Pegue los datos aquí..."></textarea>
+    <textarea id="csv-input" placeholder="Pega las 87 líneas aquí..."></textarea>
 
     <div class="row">
-        <button class="primary" id="btn-cargar">CARGAR / ACTUALIZAR</button>
-        <button class="danger" id="btn-limpiar">BORRAR TODA LA BASE</button>
+        <button class="primary" onclick="window.cargar()">SUBIR DATOS</button>
+        <button class="danger" onclick="window.limpiar()">BORRAR TODO</button>
     </div>
 
-    <div id="status" class="status"></div>
-    <div id="warnings"></div>
-
-    <h2>Registros en la Nube</h2>
     <table>
         <thead>
             <tr>
                 <th>UF</th>
-                <th>Nombre Completo</th>
+                <th>Datos</th>
                 <th>Cochera</th>
-                <th>ID Documento</th>
             </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -48,7 +43,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, writeBatch, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo",
@@ -63,93 +58,66 @@
         const db = getFirestore(app);
         const colRef = collection(db, "cocheras_edificio");
 
-        // --- CARGAR DATOS ---
-        async function cargarDatos() {
-            const input = document.getElementById("csv-input");
-            const texto = input.value.trim();
-            if (!texto) return alert("Pega los datos primero.");
+        // --- FUNCIÓN CARGAR ---
+        window.cargar = async () => {
+            const txt = document.getElementById("csv-input").value.trim();
+            if(!txt) return alert("Pega los datos");
 
             const status = document.getElementById("status");
-            status.textContent = "Procesando...";
+            status.innerText = "Cargando...";
 
-            const lineas = texto.split(/\r?\n/);
-            let procesados = 0;
-            let saltados = 0;
+            const lineas = txt.split("\n");
+            const batch = writeBatch(db);
+            let contador = 0;
 
-            for (let linea of lineas) {
-                if (linea.toUpperCase().includes("UF,PROPIETARIO") || !linea.includes(',')) continue;
+            lineas.forEach(linea => {
+                const columnas = linea.split(",");
+                if(columnas.length >= 2) {
+                    // Limpiamos solo la UF
+                    let ufOriginal = columnas.replace(/[^0-9]/g, '');
+                    if(ufOriginal && ufOriginal.length <= 4) {
+                        let ufID = ufOriginal.padStart(4, '0');
+                        // El resto de la línea lo tomamos como nombre directamente
+                        let info = columnas.slice(1).join(" ").trim();
+                        
+                        const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
+                        batch.set(docRef, {
+                            uf: ufID,
+                            prop: info || "S/D",
+                            cochera: ufOriginal,
+                            patente: ""
+                        });
+                        contador++;
+                    }
+                }
+            });
 
-                const columnas = linea.split(',');
-                
-                // Limpieza de UF: solo números, max 4 dígitos
-                let ufNum = columnas.replace(/[^0-9]/g, '');
-                if (!ufNum || ufNum.length > 4) { saltados++; continue; }
+            await batch.commit();
+            status.innerText = "¡Listo! " + contador + " registros cargados.";
+            document.getElementById("csv-input").value = "";
+        };
 
-                let ufID = ufNum.padStart(4, '0');
-                
-                // Unimos el resto de las columnas por si el nombre tenía comas adentro
-                let resto = columnas.slice(1).join(' ').replace(/,,+/g, ',').trim();
-
-                // Guardamos con ID Determinístico (UF-0001) para que NUNCA se duplique
-                await setDoc(doc(db, "cocheras_edificio", "UF-" + ufID), {
-                    uf: ufID,
-                    prop: resto,
-                    cochera: ufNum,
-                    patente: ""
-                }, { merge: true });
-
-                procesados++;
-            }
-
-            status.innerHTML = `<b style="color:#00a884">¡Éxito!</b> Cargados: ${procesados} | Saltados: ${saltados}`;
-            input.value = "";
-        }
-
-        // --- BORRAR TODO ---
-        async function limpiarTodo() {
-            if (!confirm("¿Seguro? Esto vacía la nube por completo.")) return;
-            const status = document.getElementById("status");
-            status.textContent = "Borrando base de datos...";
+        // --- FUNCIÓN BORRAR ---
+        window.limpiar = async () => {
+            if(!confirm("¿Borrar todo?")) return;
             const snap = await getDocs(colRef);
-            for (const d of snap.docs) { await deleteDoc(d.ref); }
-            status.textContent = "Base vaciada con éxito.";
-        }
+            const batch = writeBatch(db);
+            snap.forEach(d => batch.delete(d.ref));
+            await batch.commit();
+            document.getElementById("status").innerText = "Base vacía.";
+        };
 
         // --- ESCUCHA EN VIVO ---
         onSnapshot(query(colRef, orderBy("uf")), (snap) => {
             const tbody = document.getElementById("tbody");
-            const warnings = document.getElementById("warnings");
             tbody.innerHTML = "";
-            warnings.innerHTML = "";
-
-            let ufsVistas = new Map();
-
             snap.forEach(d => {
                 const data = d.data();
-                const uf = data.uf;
-
-                // Detectar si hay duplicados (por IDs viejos)
-                ufsVistas.set(uf, (ufsVistas.get(uf) || 0) + 1);
-
                 const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td>${uf}</td>
-                    <td>${data.prop}</td>
-                    <td>${data.cochera}</td>
-                    <td style="color:#555; font-size:11px;">${d.id}</td>
-                `;
+                tr.innerHTML = `<td>${data.uf}</td><td>${data.prop}</td><td>${data.cochera}</td>`;
                 tbody.appendChild(tr);
             });
-
-            // Mostrar alerta de duplicados si existen registros viejos
-            const duplicados = [...ufsVistas.entries()].filter(x => x > 1);
-            if (duplicados.length > 0) {
-                warnings.innerHTML = `<div class="warn">⚠️ <b>Atención:</b> Hay registros viejos duplicados. Pulsa "BORRAR TODA LA BASE" y carga de nuevo.</div>`;
-            }
         });
-
-        document.getElementById("btn-cargar").onclick = cargarDatos;
-        document.getElementById("btn-limpiar").onclick = limpiarTodo;
     </script>
 </body>
 </html>

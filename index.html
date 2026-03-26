@@ -25,7 +25,7 @@
         #lista { 
             display: flex; 
             flex-direction: column; 
-            gap: 20px; 
+            gap: 25px; 
             margin-top: 20px;
         }
 
@@ -37,38 +37,32 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        /* Estilo para los títulos de campo (Labels) */
+        /* Estilo para las etiquetas (Títulos de cada dato) */
         .label { 
             font-size: 0.85em; 
             color: #8696a0; 
             display: block;
-            margin-top: 12px;
-            margin-bottom: 2px;
+            margin-top: 15px;
+            margin-bottom: 3px;
+            text-transform: lowercase; /* Para que coincida con tu ejemplo 'uf', 'inquilino' */
         }
         .label:first-child { margin-top: 0; }
 
-        /* Estilo para el contenido de los datos */
+        /* Estilo para los datos puros */
         .data-text { 
             color: #e9edef; 
             font-size: 1.15em; 
             font-weight: 500;
             display: block;
+            min-height: 1.2em; /* Mantiene el espacio si el dato está vacío */
         }
 
-        /* Color especial para resaltar la UF */
-        .uf-highlight {
-            color: #00a884;
-            font-size: 1.3em;
-            font-weight: bold;
-            text-transform: uppercase;
-        }
-
+        /* Enlaces de teléfono limpios */
         .tel-link {
-            color: #53bdeb;
+            color: #e9edef; /* Mismo color que el texto para que no distraiga */
             text-decoration: none;
-            font-size: 1.1em;
+            font-size: 1.15em;
             display: block;
-            margin-top: 2px;
         }
 
         .no-results { text-align: center; color: #8696a0; margin-top: 50px; }
@@ -78,11 +72,11 @@
 
 <div class="header">
     <h2 style="margin: 10px 0; color: #e9edef;">Cocheras Edificio</h2>
-    <input type="text" id="buscador" class="search-box" placeholder="UF, Propietario o Inquilino...">
+    <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF, Propietario o Inquilino...">
 </div>
 
 <div id="lista">
-    <p style="text-align:center; color:#8696a0;">Conectando con la base de datos...</p>
+    <p style="text-align:center; color:#8696a0;">Conectando...</p>
 </div>
 
 <script type="module">
@@ -104,13 +98,11 @@
 
     let todosLosDatos = [];
 
-    // 1. Escuchar datos en tiempo real
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         todosLosDatos = snap.docs.map(d => d.data());
         renderizar(todosLosDatos);
     });
 
-    // 2. Función para dibujar las tarjetas siguiendo tu estructura exacta
     function renderizar(datos) {
         const contenedor = document.getElementById('lista');
         contenedor.innerHTML = ""; 
@@ -124,35 +116,33 @@
             const card = document.createElement('div');
             card.className = 'card';
             
+            // Renderizado siguiendo exactamente tu estructura
             card.innerHTML = `
-                <div class="uf-highlight">uf ${i.uf || '----'}</div>
+                <span class="label">uf</span>
+                <span class="data-text">${i.uf || ''}</span>
                 
                 <span class="label">Propietario</span>
-                <span class="data-text">${i.prop || 'No registrado'}</span>
+                <span class="data-text">${i.prop || ''}</span>
 
                 <span class="label">telefono Propietario</span>
-                <a href="tel:${i.tel_prop}" class="tel-link">${i.tel_prop || 'Sin número'}</a>
+                <a href="tel:${i.tel_prop}" class="tel-link">${i.tel_prop || ''}</a>
 
                 <span class="label">inquilino</span>
-                <span class="data-text">${i.inquilino || 'Sin inquilino'}</span>
+                <span class="data-text">${i.inquilino || ''}</span>
 
                 <span class="label">telefono inquilino</span>
-                <a href="tel:${i.tel_inq}" class="tel-link">${i.tel_inq || 'Sin número'}</a>
-
-                <span class="label">Cochera asignada</span>
-                <span class="data-text">${i.cochera || '---'}</span>
+                <a href="tel:${i.tel_inq}" class="tel-link">${i.tel_inq || ''}</a>
             `;
             contenedor.appendChild(card);
         });
     }
 
-    // 3. Filtro del buscador
     document.getElementById('buscador').addEventListener('input', (e) => {
         const busqueda = e.target.value.toLowerCase();
         const filtrados = todosLosDatos.filter(i => {
-            const uf = String(i.uf).toLowerCase();
-            const prop = (i.prop || "").toLowerCase();
-            const inq = (i.inquilino || "").toLowerCase();
+            const uf = String(i.uf || "").toLowerCase();
+            const prop = String(i.prop || "").toLowerCase();
+            const inq = String(i.inquilino || "").toLowerCase();
             return uf.includes(busqueda) || prop.includes(busqueda) || inq.includes(busqueda);
         });
         renderizar(filtrados);

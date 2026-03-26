@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>SISTEMA COCHERAS - V7 BLINDADO</title>
+    <title>SISTEMA COCHERAS - V8 CLEAN</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
@@ -13,66 +13,32 @@
             --text: #e9edef; 
             --border: #222d34; 
             --success: #16a34a;
-            --warning-empty: #facc15; /* Amarillo para vacías */
+            --warning-empty: #facc15; 
             --orange: #f97316;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-        
-        body { 
-            background: var(--bg); 
-            color: var(--text); 
-            display: flex; 
-            justify-content: center; 
-            min-height: 100vh; 
-            overflow-x: hidden; 
-            padding: 0 10px;
-        }
-
+        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; padding: 0 10px; }
         .main-container { width: 100%; max-width: 500px; position: relative; }
 
-        .header { 
-            position: sticky; 
-            top: 0; 
-            background: var(--bg); 
-            padding: 15px 0; 
-            z-index: 900; 
-            border-bottom: 1px solid var(--border);
-        }
-
+        .header { position: sticky; top: 0; background: var(--bg); padding: 15px 0; z-index: 900; border-bottom: 1px solid var(--border); }
         .search-group { display: flex; gap: 6px; margin-top: 10px; }
         .search-box { flex: 1; padding: 12px; background: #202c33; border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 16px; outline: none; }
         
-        .btn-header { 
-            background: var(--primary); border: none; border-radius: 10px; 
-            width: 48px; color: white; cursor: pointer; font-size: 16px;
-            display: flex; align-items: center; justify-content: center;
-        }
+        .btn-header { background: var(--primary); border: none; border-radius: 10px; width: 45px; height: 45px; color: white; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
         .btn-reset { background: #374151; }
+        .btn-filter-empty { background: #854d0e; } /* Color ocre para identificar vacantes */
 
         #lista { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; padding-bottom: 120px; }
 
-        /* TARJETAS BLINDADAS */
-        .card { 
-            background: var(--card); 
-            padding: 18px; 
-            border-radius: 15px; 
-            border: 1px solid var(--border); 
-            border-left: 6px solid var(--primary); /* Azul por defecto */
-            transition: transform 0.2s;
-        }
-        
-        /* CLASE PARA COCHERA VACÍA */
-        .card.is-empty {
-            border-left: 6px solid var(--warning-empty) !important;
-        }
+        .card { background: var(--card); padding: 18px; border-radius: 15px; border: 1px solid var(--border); border-left: 6px solid var(--primary); transition: 0.2s; }
+        .card.is-empty { border-left: 6px solid var(--warning-empty) !important; }
 
         .card-header { display: flex; justify-content: space-between; align-items: center; }
-        .uf-title { color: var(--primary); font-weight: bold; font-size: 1.2em; }
+        .uf-title { color: var(--primary); font-weight: bold; font-size: 1.25em; }
         .card.is-empty .uf-title { color: var(--warning-empty); }
 
         .header-icons { display: flex; gap: 20px; font-size: 1.3em; cursor: pointer; }
-
         .card-body { display: none; margin-top: 15px; border-top: 1px dashed #4b5563; padding-top: 15px; }
         .card.expanded .card-body { display: block; }
 
@@ -80,26 +46,14 @@
         .label-blue { color: var(--primary); font-weight: bold; margin-right: 5px; }
         .card.is-empty .label-blue { color: var(--warning-empty); }
 
-        /* NAVEGACIÓN */
-        .float-btn {
-            position: fixed; width: 55px; height: 55px; border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 22px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            cursor: pointer; z-index: 1000; border: 2px solid white; text-decoration: none;
-        }
+        .float-btn { position: fixed; width: 55px; height: 55px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 22px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); cursor: pointer; z-index: 1000; border: 2px solid white; text-decoration: none; }
         .btn-rocket { bottom: 85px; right: 20px; background: var(--orange); display: none; }
         .btn-home { bottom: 20px; right: 20px; background: var(--primary); }
 
-        /* MODAL */
-        .modal { 
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.92); z-index: 9999; display: none;
-            align-items: center; justify-content: center; padding: 20px; 
-        }
+        .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal.active { display: flex; }
         .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: 1px solid var(--border); }
         .modal input { width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; }
-
         .btn-ui { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 10px; border: none; font-weight: bold; color: white; text-transform: uppercase; font-size: 0.85em; cursor: pointer; text-decoration: none; }
     </style>
 </head>
@@ -107,11 +61,12 @@
 
 <div class="main-container">
     <div class="header">
-        <h2 style="text-align: center; font-size: 1.4em;">Cocheras Edificio</h2>
+        <h2 style="text-align: center; font-size: 1.3em;">Control de Cocheras</h2>
         <div class="search-group">
             <input type="text" id="buscador" class="search-box" placeholder="UF o Apellido...">
-            <button id="btn-search" class="btn-header"><i class="fas fa-search"></i></button>
-            <button id="btn-refresh" class="btn-header btn-reset"><i class="fas fa-sync-alt"></i></button>
+            <button id="btn-search" class="btn-header" title="Buscar"><i class="fas fa-search"></i></button>
+            <button id="btn-filter-empty" class="btn-header btn-filter-empty" title="Ver Vacías"><i class="far fa-square"></i></button>
+            <button id="btn-refresh" class="btn-header btn-reset" title="Restablecer"><i class="fas fa-sync-alt"></i></button>
         </div>
     </div>
     <div id="lista"></div>
@@ -122,11 +77,11 @@
 
 <div id="modal-form" class="modal">
     <div class="modal-content">
-        <h3 id="modal-title">Editar Cochera</h3>
+        <h3>Editar Cochera</h3>
         <input id="f-uf" type="text" placeholder="UF">
         <input id="f-prop" type="text" placeholder="Propietario">
         <input id="f-telp" type="text" placeholder="Tel. Propietario">
-        <input id="f-inq" type="text" placeholder="Inquilino (Vacio = Libre)">
+        <input id="f-inq" type="text" placeholder="Inquilino">
         <input id="f-teli" type="text" placeholder="Tel. Inquilino">
         <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button id="btn-save" class="btn-ui" style="flex:1; background:var(--primary)">GUARDAR</button>
@@ -139,12 +94,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    const config = { 
-        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
-        authDomain: "gestionuf-remoto.firebaseapp.com", 
-        projectId: "gestionuf-remoto" 
-    };
-
+    const config = { apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", authDomain: "gestionuf-remoto.firebaseapp.com", projectId: "gestionuf-remoto" };
     const app = initializeApp(config);
     const db = getFirestore(app);
     const colRef = collection(db, "departamentos");
@@ -152,21 +102,12 @@
     let departamentos = [];
     let editId = null;
 
-    // Sincronización Blindada + Lógica de Conteo
     onSnapshot(query(colRef, orderBy("UF", "asc")), (snap) => {
-        departamentos = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .filter(d => {
-                const n = parseInt(d.UF);
-                return n >= 0 && n <= 87;
-            });
-
-        // CALCULAR COCHERAS VACÍAS
+        departamentos = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+            .filter(d => { const n = parseInt(d.UF); return n >= 0 && n <= 87; });
+        
         const vacias = departamentos.filter(d => !d.Inquilino || d.Inquilino.trim() === "").length;
-        
-        // Reportar a la consola para el HUB Central
-        console.log(`%c [HUB] Cocheras Vacías detectadas: ${vacias} `, "background: #facc15; color: #000; font-weight: bold;");
-        
+        console.log(`[HUB] Vacantes: ${vacias}`);
         render(departamentos);
     });
 
@@ -175,14 +116,12 @@
         list.innerHTML = "";
 
         if(data.length === 0) {
-            list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#8696a0;">Registro no encontrado</div>`;
+            list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#8696a0;">Sin resultados</div>`;
             return;
         }
 
         data.forEach(d => {
-            // BLINDAJE: Detección de cochera vacía
             const esVacia = !d.Inquilino || d.Inquilino.trim() === "";
-            
             const card = document.createElement("div");
             card.className = `card ${esVacia ? 'is-empty' : ''}`;
             card.id = `card-${d.id}`;
@@ -190,8 +129,8 @@
             card.innerHTML = `
                 <div class="card-header">
                     <div>
-                        <div class="uf-title">UF: ${d.UF || '---'} ${esVacia ? '🟡' : ''}</div>
-                        <div style="margin-top:4px; font-weight:500;">${d.Propietario || 'S/D'}</div>
+                        <div class="uf-title">UF: ${d.UF || '---'}</div>
+                        <div style="margin-top:4px;">${d.Propietario || 'S/D'}</div>
                     </div>
                     <div class="header-icons">
                         <i class="fas fa-eye" style="color:#8696a0" onclick="window.toggleExpand('${d.id}')"></i>
@@ -201,11 +140,11 @@
                 <div class="card-body">
                     <div class="data-line"><span class="label-blue">Prop:</span> ${d.Propietario || '-'}</div>
                     <div class="data-line"><span class="label-blue">Tel:</span> ${d.TelefonoPropietario || 'N/C'}</div>
-                    <div class="data-line"><span class="label-blue">Inq:</span> ${esVacia ? '<b style="color:var(--warning-empty)">VACANTE / LIBRE</b>' : d.Inquilino}</div>
+                    <div class="data-line"><span class="label-blue">Inq:</span> ${esVacia ? '<span style="color:var(--warning-empty)">LIBRE</span>' : d.Inquilino}</div>
                     <div class="data-line"><span class="label-blue">Tel:</span> ${d.TelefonoInquilino || 'N/C'}</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:15px;">
-                        <a href="tel:${d.TelefonoInquilino || d.TelefonoPropietario}" class="btn-ui" style="background:var(--primary)"><i class="fas fa-phone"></i> LLAMAR</a>
-                        <a href="https://wa.me/${String(d.TelefonoInquilino || d.TelefonoPropietario).replace(/[^0-9]/g, '')}" target="_blank" class="btn-ui" style="background:var(--success)"><i class="fab fa-whatsapp"></i> CHAT</a>
+                        <a href="tel:${d.TelefonoInquilino || d.TelefonoPropietario}" class="btn-ui" style="background:var(--primary)"><i class="fas fa-phone"></i></a>
+                        <a href="https://wa.me/${String(d.TelefonoInquilino || d.TelefonoPropietario).replace(/[^0-9]/g, '')}" target="_blank" class="btn-ui" style="background:var(--success)"><i class="fab fa-whatsapp"></i></a>
                     </div>
                 </div>
             `;
@@ -213,11 +152,10 @@
         });
     }
 
-    // BUSCADOR Y REFRESH
-    const ejecutarBusqueda = () => {
-        const v = document.getElementById('buscador').value.trim().toLowerCase();
-        const res = departamentos.filter(d => String(d.UF).toLowerCase().includes(v) || (d.Propietario||"").toLowerCase().includes(v));
-        render(res);
+    // Filtros
+    document.getElementById('btn-filter-empty').onclick = () => {
+        const vacias = departamentos.filter(d => !d.Inquilino || d.Inquilino.trim() === "");
+        render(vacias);
     };
 
     document.getElementById('btn-refresh').onclick = () => {
@@ -225,12 +163,16 @@
         render(departamentos);
     };
 
-    document.getElementById('btn-search').onclick = ejecutarBusqueda;
-    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") ejecutarBusqueda(); };
+    const buscar = () => {
+        const v = document.getElementById('buscador').value.trim().toLowerCase();
+        const res = departamentos.filter(d => String(d.UF).toLowerCase().includes(v) || (d.Propietario||"").toLowerCase().includes(v));
+        render(res);
+    };
+    document.getElementById('btn-search').onclick = buscar;
+    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") buscar(); };
 
-    // ACCIONES GLOBALES
+    // Globales
     window.toggleExpand = (id) => document.getElementById(`card-${id}`).classList.toggle('expanded');
-    
     window.editUF = (id) => {
         const d = departamentos.find(x => x.id === id);
         if(!d) return;
@@ -244,23 +186,13 @@
     };
 
     document.getElementById("btn-cancel").onclick = () => document.getElementById("modal-form").classList.remove("active");
-    
     document.getElementById("btn-save").onclick = async () => {
-        const dataUpdate = {
-            UF: document.getElementById("f-uf").value,
-            Propietario: document.getElementById("f-prop").value,
-            TelefonoPropietario: document.getElementById("f-telp").value,
-            Inquilino: document.getElementById("f-inq").value,
-            TelefonoInquilino: document.getElementById("f-teli").value
-        };
-        await updateDoc(doc(db, "departamentos", editId), dataUpdate);
+        const upd = { UF: document.getElementById("f-uf").value, Propietario: document.getElementById("f-prop").value, TelefonoPropietario: document.getElementById("f-telp").value, Inquilino: document.getElementById("f-inq").value, TelefonoInquilino: document.getElementById("f-teli").value };
+        await updateDoc(doc(db, "departamentos", editId), upd);
         document.getElementById("modal-form").classList.remove("active");
     };
 
-    window.onscroll = () => {
-        const btn = document.getElementById("go-top");
-        btn.style.display = (window.scrollY > 400) ? "flex" : "none";
-    };
+    window.onscroll = () => { document.getElementById("go-top").style.display = (window.scrollY > 400) ? "flex" : "none"; };
 </script>
 </body>
 </html>

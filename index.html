@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - LISTADO</title>
+    <title>SISTEMA COCHERAS - LISTADO CORRECTO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
@@ -32,13 +32,14 @@
 
         #lista { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
 
-        /* Estilo de la Tarjeta igual a la imagen */
+        /* Estilo de la Tarjeta igual a la Imagen 1 */
         .card { 
             background: #111b21; 
             padding: 20px; 
             border-radius: 15px; 
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             border: 1px solid #202c33;
+            transition: all 0.3s ease;
         }
 
         /* Cabecera de la tarjeta: UF y Iconos */
@@ -46,18 +47,22 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 15px;
+            margin-bottom: 10px; /* Reducido para que la cabecera sea más compacta */
         }
 
         .uf-info .uf-title { color: #3b82f6; font-weight: bold; font-size: 1.2em; margin: 0; }
         .uf-info .prop-main { color: #e9edef; font-size: 1.1em; margin-top: 5px; display: block; }
 
-        .header-icons { display: flex; gap: 15px; color: #8696a0; font-size: 1.2em; }
-        .icon-view { color: #e9edef; }
-        .icon-edit { color: #2563eb; }
-        .icon-delete { color: #ef4444; }
+        .header-icons { display: flex; gap: 15px; color: #8696a0; font-size: 1.2em; cursor: pointer; }
+        .icon-view, .icon-edit { color: #8696a0; transition: color 0.2s; }
+        .icon-view:hover, .icon-edit:hover { color: #e9edef; }
 
-        /* Cuerpo de datos */
+        /* Cuerpo de datos - Oculto por defecto */
+        .card-body {
+            display: none;
+            margin-top: 15px;
+        }
+
         .divider { border-top: 1px dashed #202c33; margin: 15px 0; }
 
         .data-group { margin-bottom: 12px; }
@@ -92,6 +97,11 @@
         .btn-chat { background: #16a34a; }
 
         .no-results { text-align: center; color: #8696a0; margin-top: 50px; }
+        
+        /* Clase para expandir la tarjeta */
+        .card.expanded .card-body {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -124,6 +134,26 @@
 
     let todosLosDatos = [];
 
+    // Función auxiliar para extraer solo el nombre de un string concatenado
+    // Ej: "0002,Bonifacio Jorge,+549..." -> "Bonifacio Jorge"
+    function extraerNombre(stringConcatenado) {
+        if (!stringConcatenado || stringConcatenado.includes("N/C")) return "---";
+        if (!stringConcatenado.includes(',')) return stringConcatenado; // Si ya está limpio
+        const partes = stringConcatenado.split(',');
+        return partes ? partes.trim() : "---";
+    }
+
+    // Función auxiliar para extraer solo el teléfono de un string concatenado
+    // Ej: "0002,Bonifacio Jorge,+54 9 11 6350-7259,..." -> "+54 9 11 6350-7259"
+    function extraerTelefono(stringConcatenado) {
+        if (!stringConcatenado || stringConcatenado.includes("N/C")) return "N/C";
+        if (!stringConcatenado.includes(',')) return stringConcatenado; // Si ya está limpio
+        const partes = stringConcatenado.split(',');
+        // Buscamos la parte que contiene un '+' o parece número
+        const tel = partes.find(p => p.trim().startsWith('+') || /^\d/.test(p.trim()));
+        return tel ? tel.trim() : "N/C";
+    }
+
     onSnapshot(query(colRef, orderBy("uf")), (snap) => {
         todosLosDatos = snap.docs.map(d => d.data());
         renderizar(todosLosDatos);
@@ -138,62 +168,77 @@
             return;
         }
 
-        datos.forEach(i => {
+        datos.forEach((i, index) => {
             const card = document.createElement('div');
             card.className = 'card';
-            
+            card.id = `card-${index}`; // ID único para controlar expansión
+
+            // Mapeo y limpieza de datos concatenados
+            const nombreProp = extraerNombre(i.prop);
+            const telProp = extraerTelefono(i.tel_prop);
+            const nombreInq = extraerNombre(i.inquilino);
+            const telInq = extraerTelefono(i.tel_inq);
+
             card.innerHTML = `
                 <div class="card-header">
                     <div class="uf-info">
                         <h3 class="uf-title">UF: ${i.uf || '----'}</h3>
-                        <span class="prop-main">${i.prop || '---'}</span>
+                        <span class="prop-main">${nombreProp}</span>
                     </div>
                     <div class="header-icons">
-                        <i class="fa-regular fa-eye icon-view"></i>
-                        <i class="fa-solid fa-pen-to-square icon-edit"></i>
-                        <i class="fa-solid fa-trash icon-delete"></i>
+                        <i class="fa-regular fa-eye icon-view" onclick="toggleCard(${index})"></i>
+                        <i class="fa-solid fa-pen-to-square icon-edit" onclick="toggleCard(${index})"></i>
+                        </div>
+                </div>
+
+                <div class="card-body">
+                    <div class="divider"></div>
+
+                    <div class="data-group">
+                        <span class="blue-label">Prop:</span>
+                        <span class="value-text">${nombreProp} |</span>
                     </div>
-                </div>
 
-                <div class="divider"></div>
+                    <div class="data-group">
+                        <span class="blue-label">Tel:</span>
+                        <span class="value-text">${telProp}</span>
+                    </div>
 
-                <div class="data-group">
-                    <span class="blue-label">Prop:</span>
-                    <span class="value-text">${i.prop || '---'} |</span>
-                </div>
+                    <div class="data-group">
+                        <span class="blue-label">Inq:</span>
+                        <span class="value-text">${nombreInq !== "---" ? nombreInq : "Sin Inquilino"} |</span>
+                    </div>
 
-                <div class="data-group">
-                    <span class="blue-label">Tel:</span>
-                    <span class="value-text">${i.tel_prop || 'N/C'}</span>
-                </div>
+                    <div class="data-group">
+                        <span class="blue-label">Tel:</span>
+                        <span class="value-text">${telInq}</span>
+                    </div>
 
-                <div class="data-group">
-                    <span class="blue-label">Inq:</span>
-                    <span class="value-text">${i.inquilino || 'Sin Inquilino'} |</span>
-                </div>
-
-                <div class="data-group">
-                    <span class="blue-label">Tel:</span>
-                    <span class="value-text">${i.tel_inq || 'N/C'}</span>
-                </div>
-
-                <div class="card-actions">
-                    <a href="tel:${i.tel_inq || i.tel_prop}" class="btn btn-call">
-                        <i class="fa-solid fa-phone"></i> LLAMAR
-                    </a>
-                    <a href="https://wa.me/${String(i.tel_inq || i.tel_prop).replace(/[^0-9]/g, '')}" target="_blank" class="btn btn-chat">
-                        <i class="fa-brands fa-whatsapp"></i> CHAT
-                    </a>
+                    <div class="card-actions">
+                        <a href="tel:${telInq !== "N/C" ? telInq : telProp}" class="btn btn-call">
+                            <i class="fa-solid fa-phone"></i> LLAMAR
+                        </a>
+                        <a href="https://wa.me/${String(telInq !== "N/C" ? telInq : telProp).replace(/[^0-9]/g, '')}" target="_blank" class="btn btn-chat">
+                            <i class="fa-brands fa-whatsapp"></i> CHAT
+                        </a>
+                    </div>
                 </div>
             `;
             contenedor.appendChild(card);
         });
     }
 
+    // Función global para expandir/contraer tarjeta
+    window.toggleCard = function(index) {
+        const card = document.getElementById(`card-${index}`);
+        card.classList.toggle('expanded');
+    }
+
     document.getElementById('buscador').addEventListener('input', (e) => {
         const busqueda = e.target.value.toLowerCase();
         const filtrados = todosLosDatos.filter(i => {
             const uf = String(i.uf || "").toLowerCase();
+            // Para el buscador, usamos los datos concatenados originales para no perder coincidencias
             const prop = String(i.prop || "").toLowerCase();
             const inq = String(i.inquilino || "").toLowerCase();
             return uf.includes(busqueda) || prop.includes(busqueda) || inq.includes(busqueda);

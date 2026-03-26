@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>SISTEMA COCHERAS - ENTERPRISE V4</title>
+    <title>SISTEMA COCHERAS - FIXED V5</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
@@ -13,11 +13,9 @@
             --text: #e9edef; 
             --border: #222d34; 
             --success: #16a34a;
-            --danger: #ef4444;
         }
 
-        /* RESET Y BLINDAJE DE PANTALLA */
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
         
         body { 
             background: var(--bg); 
@@ -29,74 +27,29 @@
             padding: 0 10px;
         }
 
-        /* Contenedor Principal Adaptable (PC y Móvil) */
         .main-container {
             width: 100%;
-            max-width: 500px; /* Evita que se estire en monitores de PC */
+            max-width: 500px;
             position: relative;
-            display: flex;
-            flex-direction: column;
         }
 
-        /* HEADER FIJO Y RESPONSIVE */
         .header { 
             position: sticky; 
             top: 0; 
             background: var(--bg); 
             padding: 15px 0; 
-            z-index: 1000; 
+            z-index: 900; 
             border-bottom: 1px solid var(--border);
         }
 
-        .search-group {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
+        .search-group { display: flex; gap: 8px; margin-top: 10px; }
+        .search-box { flex: 1; padding: 12px; background: #202c33; border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 16px; outline: none; }
+        
+        .btn-search-icon { background: var(--primary); border: none; border-radius: 10px; width: 50px; color: white; cursor: pointer; }
 
-        .search-box { 
-            flex: 1;
-            padding: 12px 15px; 
-            background: #202c33; 
-            border: 1px solid var(--border); 
-            border-radius: 10px; 
-            color: white; 
-            font-size: 16px; 
-            outline: none;
-        }
+        #lista { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; padding-bottom: 120px; }
 
-        .btn-search-icon {
-            background: var(--primary);
-            border: none;
-            border-radius: 10px;
-            width: 50px;
-            color: white;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-
-        /* LISTADO BLINDADO */
-        #lista { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 15px; 
-            margin-top: 20px; 
-            padding-bottom: 120px; 
-        }
-
-        /* TARJETAS RESPONSIVE */
-        .card { 
-            background: var(--card); 
-            padding: 18px; 
-            border-radius: 15px; 
-            border: 1px solid var(--border); 
-            border-left: 6px solid var(--primary);
-            width: 100%; /* Se adapta al contenedor max-width */
-        }
-
+        .card { background: var(--card); padding: 18px; border-radius: 15px; border: 1px solid var(--border); border-left: 6px solid var(--primary); }
         .card-header { display: flex; justify-content: space-between; align-items: center; }
         .uf-title { color: var(--primary); font-weight: bold; font-size: 1.2em; }
         .header-icons { display: flex; gap: 20px; font-size: 1.3em; cursor: pointer; }
@@ -111,30 +64,41 @@
         .float-btn {
             position: fixed; width: 55px; height: 55px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
-            cursor: pointer; z-index: 2000; border: 2px solid white; text-decoration: none;
+            color: white; font-size: 22px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            cursor: pointer; z-index: 1000; border: 2px solid white; text-decoration: none;
         }
-        .btn-rocket { bottom: 85px; right: calc(50% - 240px); background: #f97316; display: none; }
-        .btn-home { bottom: 20px; right: calc(50% - 240px); background: #2563eb; }
+        .btn-rocket { bottom: 85px; right: 20px; background: #f97316; display: none; }
+        .btn-home { bottom: 20px; right: 20px; background: #2563eb; }
 
-        /* Ajuste de botones flotantes para móviles */
-        @media (max-width: 500px) {
-            .btn-rocket { right: 20px; }
-            .btn-home { right: 20px; }
-        }
-
-        /* MODAL BLINDADO */
+        /* MODAL CORREGIDO */
         .modal { 
-            position: fixed; inset: 0; background: rgba(0,0,0,0.9); 
-            z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 15px; 
+            position: fixed; 
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); 
+            z-index: 9999; 
+            display: none; /* Asegura que inicie oculto */
+            align-items: center; 
+            justify-content: center; 
+            padding: 20px; 
         }
+        
+        /* Cuando tiene la clase .active se muestra */
+        .modal.active { display: flex; }
+
         .modal-content { 
-            background: var(--card); padding: 25px; border-radius: 20px; 
-            width: 100%; max-width: 400px; border: 1px solid var(--border); 
+            background: var(--card); 
+            padding: 25px; 
+            border-radius: 20px; 
+            width: 100%; 
+            max-width: 400px; 
+            border: 1px solid var(--border);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
+
+        .modal h3 { margin-bottom: 20px; text-align: center; color: var(--primary); }
         .modal input { 
             width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; 
-            border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; 
+            border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; font-size: 16px;
         }
 
         .btn-ui { 
@@ -157,27 +121,29 @@
         </div>
     </div>
 
-    <div id="lista"></div>
+    <div id="lista">
+        <p style="text-align:center; margin-top:20px; color:#8696a0;">Cargando cocheras (0-87)...</p>
+    </div>
 </div>
 
-<div id="go-top" class="float-btn btn-rocket" onclick="window.scrollTo(0,0)">
+<div id="go-top" class="float-btn btn-rocket" onclick="window.scrollTo({top:0, behavior:'smooth'})">
     <i class="fas fa-rocket"></i>
 </div>
 <a href="https://vectorescomprados-pixel.github.io/Gestion-de-Consorcios/" class="float-btn btn-home">
     <i class="fas fa-home"></i>
 </a>
 
-<div id="modal-form" class="modal hidden">
+<div id="modal-form" class="modal">
     <div class="modal-content">
-        <h3 style="margin-bottom:20px; text-align:center; color:var(--primary)">Editar Cochera</h3>
-        <input id="f-uf" placeholder="UF (0-87)">
-        <input id="f-prop" placeholder="Propietario">
-        <input id="f-telp" placeholder="Tel. Propietario">
-        <input id="f-inq" placeholder="Inquilino">
-        <input id="f-teli" placeholder="Tel. Inquilino">
-        <div style="display: flex; gap: 10px;">
+        <h3>Editar Cochera</h3>
+        <input id="f-uf" type="text" placeholder="UF">
+        <input id="f-prop" type="text" placeholder="Propietario">
+        <input id="f-telp" type="text" placeholder="Tel. Propietario">
+        <input id="f-inq" type="text" placeholder="Inquilino">
+        <input id="f-teli" type="text" placeholder="Tel. Inquilino">
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button id="btn-save" class="btn-ui" style="flex:1; background:var(--primary)">GUARDAR</button>
-            <button id="btn-cancel" class="btn-ui" style="flex:1; background:#475569">CANCELAR</button>
+            <button id="btn-cancel" class="btn-ui" style="flex:1; background:#475569">CERRAR</button>
         </div>
     </div>
 </div>
@@ -199,17 +165,15 @@
     let departamentos = [];
     let editId = null;
 
-    // Sincronización Blindada (Rango 0-87)
+    // Sincronización Blindada
     onSnapshot(query(colRef, orderBy("UF", "asc")), (snap) => {
-        try {
-            departamentos = snap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(d => {
-                    const n = parseInt(d.UF);
-                    return n >= 0 && n <= 87; // Solo cocheras
-                });
-            render(departamentos);
-        } catch (e) { console.error("Error cargando datos:", e); }
+        departamentos = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(d => {
+                const n = parseInt(d.UF);
+                return n >= 0 && n <= 87;
+            });
+        render(departamentos);
     });
 
     function render(data) {
@@ -223,7 +187,7 @@
                 <div class="card-header">
                     <div>
                         <div class="uf-title">UF: ${d.UF || '---'}</div>
-                        <div style="font-size: 1.1em; margin-top:4px;">${d.Propietario || 'S/D'}</div>
+                        <div style="margin-top:4px;">${d.Propietario || 'S/D'}</div>
                     </div>
                     <div class="header-icons">
                         <i class="fas fa-eye" style="color:#8696a0" onclick="window.toggleExpand('${d.id}')"></i>
@@ -245,27 +209,9 @@
         });
     }
 
-    // Lógica de búsqueda (Boton y Enter)
-    const ejecutarBusqueda = () => {
-        const v = document.getElementById('buscador').value.toLowerCase();
-        const res = departamentos.filter(d => 
-            String(d.UF).toLowerCase().includes(v) || 
-            (d.Propietario || "").toLowerCase().includes(v)
-        );
-        render(res);
-    };
-
-    document.getElementById('btn-ejecutar-busqueda').onclick = ejecutarBusqueda;
-    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") ejecutarBusqueda(); };
-
-    // Scroll Control (Cohete)
-    window.onscroll = () => {
-        const btn = document.getElementById("go-top");
-        btn.style.display = (window.scrollY > 400) ? "flex" : "none";
-    };
-
-    // Funciones Globales
+    // Navegación y Funciones
     window.toggleExpand = (id) => document.getElementById(`card-${id}`).classList.toggle('expanded');
+    
     window.editUF = (id) => {
         const d = departamentos.find(x => x.id === id);
         if(!d) return;
@@ -275,10 +221,15 @@
         document.getElementById("f-telp").value = d.TelefonoPropietario || "";
         document.getElementById("f-inq").value = d.Inquilino || "";
         document.getElementById("f-teli").value = d.TelefonoInquilino || "";
-        document.getElementById("modal-form").classList.remove("hidden");
+        document.getElementById("modal-form").classList.add("active");
     };
 
-    document.getElementById("btn-cancel").onclick = () => document.getElementById("modal-form").classList.add("hidden");
+    // Cerrar Modal
+    document.getElementById("btn-cancel").onclick = () => {
+        document.getElementById("modal-form").classList.remove("active");
+    };
+
+    // Guardar
     document.getElementById("btn-save").onclick = async () => {
         const d = {
             UF: document.getElementById("f-uf").value,
@@ -287,8 +238,26 @@
             Inquilino: document.getElementById("f-inq").value,
             TelefonoInquilino: document.getElementById("f-teli").value
         };
-        await updateDoc(doc(db, "departamentos", editId), d);
-        document.getElementById("modal-form").classList.add("hidden");
+        try {
+            await updateDoc(doc(db, "departamentos", editId), d);
+            document.getElementById("modal-form").classList.remove("active");
+        } catch(e) { alert("Error al guardar"); }
+    };
+
+    // Buscador
+    const ejecutarBusqueda = () => {
+        const v = document.getElementById('buscador').value.toLowerCase();
+        const res = departamentos.filter(d => 
+            String(d.UF).toLowerCase().includes(v) || (d.Propietario||"").toLowerCase().includes(v)
+        );
+        render(res);
+    };
+    document.getElementById('btn-ejecutar-busqueda').onclick = ejecutarBusqueda;
+    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") ejecutarBusqueda(); };
+
+    window.onscroll = () => {
+        const btn = document.getElementById("go-top");
+        btn.style.display = (window.scrollY > 400) ? "flex" : "none";
     };
 </script>
 </body>

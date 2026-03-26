@@ -25,53 +25,49 @@
         #lista { 
             display: flex; 
             flex-direction: column; 
-            gap: 15px; 
+            gap: 20px; 
             margin-top: 20px;
         }
 
         .card { 
             background: #111b21; 
-            padding: 15px; 
+            padding: 20px; 
             border-radius: 12px; 
-            border-left: 5px solid #00a884;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+            border-left: 6px solid #00a884;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        .uf-num { 
-            font-weight: bold; 
-            color: #00a884; 
-            font-size: 1.1em; 
-            margin-bottom: 10px; 
-            border-bottom: 1px solid #2a3942;
-            padding-bottom: 5px;
-            display: flex;
-            justify-content: space-between;
-        }
-
-        .info-group { margin-bottom: 10px; }
-        .info-group:last-child { margin-bottom: 0; }
-
+        /* Estilo para los títulos de campo (Labels) */
         .label { 
-            font-size: 0.7em; 
+            font-size: 0.85em; 
             color: #8696a0; 
-            text-transform: uppercase; 
-            letter-spacing: 0.5px;
+            display: block;
+            margin-top: 12px;
+            margin-bottom: 2px;
+        }
+        .label:first-child { margin-top: 0; }
+
+        /* Estilo para el contenido de los datos */
+        .data-text { 
+            color: #e9edef; 
+            font-size: 1.15em; 
+            font-weight: 500;
             display: block;
         }
 
-        .data-text { 
-            color: #e9edef; 
-            font-size: 1.05em; 
-            font-weight: 500;
+        /* Color especial para resaltar la UF */
+        .uf-highlight {
+            color: #00a884;
+            font-size: 1.3em;
+            font-weight: bold;
+            text-transform: uppercase;
         }
 
         .tel-link {
             color: #53bdeb;
             text-decoration: none;
-            font-size: 0.95em;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
+            font-size: 1.1em;
+            display: block;
             margin-top: 2px;
         }
 
@@ -114,7 +110,7 @@
         renderizar(todosLosDatos);
     });
 
-    // 2. Función para dibujar las tarjetas con la nueva estructura
+    // 2. Función para dibujar las tarjetas siguiendo tu estructura exacta
     function renderizar(datos) {
         const contenedor = document.getElementById('lista');
         contenedor.innerHTML = ""; 
@@ -128,37 +124,35 @@
             const card = document.createElement('div');
             card.className = 'card';
             
-            // Creamos la estructura solicitada: Propietario, Tel, Inquilino, Tel
             card.innerHTML = `
-                <div class="uf-num">
-                    <span>UF ${i.uf}</span>
-                    <span style="color:#8696a0; font-size: 0.8em;">Cochera: ${i.cochera || '-'}</span>
-                </div>
+                <div class="uf-highlight">uf ${i.uf || '----'}</div>
                 
-                <div class="info-group">
-                    <span class="label">Propietario</span>
-                    <div class="data-text">${i.prop || '---'}</div>
-                    <a href="tel:${i.tel_prop}" class="tel-link">📞 ${i.tel_prop || 'Sin teléfono'}</a>
-                </div>
+                <span class="label">Propietario</span>
+                <span class="data-text">${i.prop || 'No registrado'}</span>
 
-                <div class="info-group" style="margin-top: 12px; border-top: 1px dashed #2a3942; padding-top: 10px;">
-                    <span class="label">Inquilino</span>
-                    <div class="data-text">${i.inquilino || 'Sin inquilino'}</div>
-                    <a href="tel:${i.tel_inq}" class="tel-link">📞 ${i.tel_inq || 'Sin teléfono'}</a>
-                </div>
+                <span class="label">telefono Propietario</span>
+                <a href="tel:${i.tel_prop}" class="tel-link">${i.tel_prop || 'Sin número'}</a>
+
+                <span class="label">inquilino</span>
+                <span class="data-text">${i.inquilino || 'Sin inquilino'}</span>
+
+                <span class="label">telefono inquilino</span>
+                <a href="tel:${i.tel_inq}" class="tel-link">${i.tel_inq || 'Sin número'}</a>
+
+                <span class="label">Cochera asignada</span>
+                <span class="data-text">${i.cochera || '---'}</span>
             `;
             contenedor.appendChild(card);
         });
     }
 
-    // 3. Filtro del buscador (Mejorado para incluir inquilinos)
+    // 3. Filtro del buscador
     document.getElementById('buscador').addEventListener('input', (e) => {
         const busqueda = e.target.value.toLowerCase();
         const filtrados = todosLosDatos.filter(i => {
             const uf = String(i.uf).toLowerCase();
             const prop = (i.prop || "").toLowerCase();
             const inq = (i.inquilino || "").toLowerCase();
-            
             return uf.includes(busqueda) || prop.includes(busqueda) || inq.includes(busqueda);
         });
         renderizar(filtrados);

@@ -2,127 +2,194 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISTEMA COCHERAS - FINAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
+    <title>SISTEMA COCHERAS - LISTADO ORDENADO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
-        .header { position: sticky; top: 0; background: #0b141a; padding-bottom: 15px; z-index: 100; border-bottom: 1px solid #2a3942; }
-        .search-box { width: 100%; padding: 12px 15px; background: #202c33; border: 1px solid #2a3942; border-radius: 10px; color: white; font-size: 16px; box-sizing: border-box; outline: none; margin-top: 10px; }
+        :root { --bg: #0b141a; --card: #111b21; --primary: #3b82f6; --text: #e9edef; --border: #222d34; --success: #16a34a; }
         
+        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; }
+        
+        .header { position: sticky; top: 0; background: var(--bg); padding-bottom: 15px; z-index: 1000; border-bottom: 1px solid var(--border); }
+        .search-box { width: 100%; padding: 12px 15px; background: #202c33; border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 16px; outline: none; margin-top: 10px; }
+
         #lista { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
-        .card { background: #111b21; padding: 20px; border-radius: 15px; border: 1px solid #202c33; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
+        /* Estilo Exacto Imagen 1 */
+        .card { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         
         .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .uf-title { color: #3b82f6; font-weight: bold; font-size: 1.2em; margin: 0; }
-        .prop-main { color: #e9edef; font-size: 1.1em; margin-top: 5px; display: block; }
+        .uf-title { color: var(--primary); font-weight: bold; font-size: 1.25em; margin: 0; }
+        .prop-main { color: var(--text); font-size: 1.1em; margin-top: 5px; display: block; }
         
-        .header-icons { display: flex; gap: 15px; color: #8696a0; font-size: 1.2em; cursor: pointer; }
-        .icon-edit { color: #2563eb; }
-        
-        .card-body { display: none; margin-top: 15px; border-top: 1px dashed #202c33; padding-top: 15px; }
+        .header-icons { display: flex; gap: 18px; font-size: 1.3em; cursor: pointer; }
+        .icon-view { color: #d1d5db; }
+        .icon-edit { color: #3b82f6; }
+
+        /* Cuerpo Detalles (Ordenado) */
+        .card-body { display: none; margin-top: 15px; border-top: 1px dashed #4b5563; padding-top: 15px; }
         .card.expanded .card-body { display: block; }
 
         .data-group { margin-bottom: 12px; }
-        .blue-label { color: #3b82f6; font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 4px; }
-        .value-text { color: #e9edef; font-size: 1.05em; display: block; word-break: break-all; }
+        .blue-label { color: var(--primary); font-weight: bold; font-size: 0.95em; display: block; margin-bottom: 4px; }
+        .value-text { color: var(--text); font-size: 1.1em; display: block; }
 
+        /* Botones de Acción */
         .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; border-radius: 8px; font-weight: bold; color: white; text-decoration: none; text-transform: uppercase; font-size: 0.9em; }
+        .btn { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 10px; border: none; font-weight: bold; color: white; text-decoration: none; text-transform: uppercase; font-size: 0.85em; cursor: pointer; }
         .btn-call { background: #2563eb; }
-        .btn-chat { background: #16a34a; }
+        .btn-chat { background: var(--success); }
+
+        /* Modal de Edición */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: 1px solid var(--border); }
+        .modal input { width: 100%; height: 45px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--border); padding: 0 12px; background: #0b141a; color: white; box-sizing: border-box; }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
 <div class="header">
-    <h2 style="margin: 10px 0; color: #e9edef;">Cocheras Edificio</h2>
-    <input type="text" id="buscador" class="search-box" placeholder="Buscar UF o Propietario...">
+    <h2 style="margin: 10px 0;">Cocheras Edificio</h2>
+    <input type="text" id="buscador" class="search-box" placeholder="Buscar UF o Apellido...">
 </div>
 
 <div id="lista"></div>
 
+<div id="modal-form" class="modal hidden">
+    <div class="modal-content">
+        <h3 style="margin-bottom:15px">Editar Registro</h3>
+        <input id="f-uf" placeholder="UF">
+        <input id="f-prop" placeholder="Propietario">
+        <input id="f-telp" placeholder="Tel. Propietario">
+        <input id="f-inq" placeholder="Inquilino">
+        <input id="f-teli" placeholder="Tel. Inquilino">
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button id="btn-save" class="btn btn-call" style="flex:1">GUARDAR</button>
+            <button id="btn-cancel" class="btn" style="flex:1; background:#475569">CANCELAR</button>
+        </div>
+    </div>
+</div>
+
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy, doc, updateDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
     const config = { 
         apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
         authDomain: "gestionuf-remoto.firebaseapp.com", 
-        projectId: "gestionuf-remoto", 
-        storageBucket: "gestionuf-remoto.firebasestorage.app", 
-        messagingSenderId: "724452752860", 
-        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
+        projectId: "gestionuf-remoto" 
     };
 
     const app = initializeApp(config);
     const db = getFirestore(app);
-    const colRef = collection(db, "cocheras_edificio");
+    const colRef = collection(db, "departamentos"); // Usamos la colección del index que funciona
 
-    let todosLosDatos = [];
+    let departamentos = [];
+    let editId = null;
 
-    onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-        todosLosDatos = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        renderizar(todosLosDatos);
+    // Sincronización en tiempo real
+    onSnapshot(query(colRef, orderBy("UF", "asc")), (snap) => {
+        departamentos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        render(departamentos);
     });
 
-    function renderizar(datos) {
-        const contenedor = document.getElementById('lista');
-        contenedor.innerHTML = ""; 
+    function render(data) {
+        const list = document.getElementById("lista");
+        list.innerHTML = "";
 
-        datos.forEach((i, index) => {
-            const card = document.createElement('div');
-            card.className = 'card';
-            card.id = `card-${index}`;
-
-            // Se muestran los datos tal cual vienen para evitar que el filtro los oculte si son "sucios"
+        data.forEach(d => {
+            const card = document.createElement("div");
+            card.className = "card";
+            card.id = `card-${d.id}`;
+            
+            // Estructura separada campo por campo como en el index original
             card.innerHTML = `
                 <div class="card-header">
                     <div class="uf-info">
-                        <h3 class="uf-title">UF: ${i.uf || '---'}</h3>
-                        <span class="prop-main">${i.prop || '---'}</span>
+                        <h3 class="uf-title">UF: ${d.UF}</h3>
+                        <span class="prop-main">${d.Propietario || 'S/D'}</span>
                     </div>
                     <div class="header-icons">
-                        <i class="fa-regular fa-eye" onclick="document.getElementById('card-${index}').classList.toggle('expanded')"></i>
-                        <i class="fa-solid fa-pen-to-square icon-edit" onclick="document.getElementById('card-${index}').classList.toggle('expanded')"></i>
+                        <i class="fas fa-eye icon-view" onclick="window.toggleExpand('${d.id}')"></i>
+                        <i class="fas fa-edit icon-edit" onclick="window.editUF('${d.id}')"></i>
                     </div>
                 </div>
 
                 <div class="card-body">
                     <div class="data-group">
                         <span class="blue-label">Prop:</span>
-                        <span class="value-text">${i.prop || '---'} |</span>
+                        <span class="value-text">${d.Propietario || '---'} |</span>
                     </div>
                     <div class="data-group">
                         <span class="blue-label">Tel:</span>
-                        <span class="value-text">${i.tel_prop || 'N/C'}</span>
+                        <span class="value-text">${d.TelefonoPropietario || 'N/C'}</span>
                     </div>
                     <div class="data-group">
                         <span class="blue-label">Inq:</span>
-                        <span class="value-text">${i.inquilino || '---'} |</span>
+                        <span class="value-text">${d.Inquilino || '---'} |</span>
                     </div>
                     <div class="data-group">
                         <span class="blue-label">Tel:</span>
-                        <span class="value-text">${i.tel_inq || 'N/C'}</span>
+                        <span class="value-text">${d.TelefonoInquilino || 'N/C'}</span>
                     </div>
 
                     <div class="card-actions">
-                        <a href="tel:${i.tel_inq || i.tel_prop}" class="btn btn-call"><i class="fa-solid fa-phone"></i> LLAMAR</a>
-                        <a href="https://wa.me/${String(i.tel_inq || i.tel_prop).replace(/[^0-9]/g, '')}" target="_blank" class="btn btn-chat"><i class="fa-brands fa-whatsapp"></i> CHAT</a>
+                        <a href="tel:${d.TelefonoInquilino || d.TelefonoPropietario}" class="btn btn-call">
+                            <i class="fas fa-phone"></i> LLAMAR
+                        </a>
+                        <a href="https://wa.me/${String(d.TelefonoInquilino || d.TelefonoPropietario).replace(/[^0-9]/g, '')}" target="_blank" class="btn btn-chat">
+                            <i class="fab fa-whatsapp"></i> CHAT
+                        </a>
                     </div>
                 </div>
             `;
-            contenedor.appendChild(card);
+            list.appendChild(card);
         });
     }
 
+    // --- FUNCIONES GLOBALES ---
+    window.toggleExpand = (id) => {
+        document.getElementById(`card-${id}`).classList.toggle('expanded');
+    };
+
+    window.editUF = (id) => {
+        const d = departamentos.find(x => x.id === id);
+        editId = id;
+        document.getElementById("f-uf").value = d.UF;
+        document.getElementById("f-prop").value = d.Propietario || "";
+        document.getElementById("f-telp").value = d.TelefonoPropietario || "";
+        document.getElementById("f-inq").value = d.Inquilino || "";
+        document.getElementById("f-teli").value = d.TelefonoInquilino || "";
+        document.getElementById("modal-form").classList.remove("hidden");
+    };
+
+    document.getElementById("btn-cancel").onclick = () => {
+        document.getElementById("modal-form").classList.add("hidden");
+    };
+
+    document.getElementById("btn-save").onclick = async () => {
+        const newData = {
+            UF: document.getElementById("f-uf").value,
+            Propietario: document.getElementById("f-prop").value,
+            TelefonoPropietario: document.getElementById("f-telp").value,
+            Inquilino: document.getElementById("f-inq").value,
+            TelefonoInquilino: document.getElementById("f-teli").value
+        };
+        if(editId) {
+            await updateDoc(doc(db, "departamentos", editId), newData);
+            document.getElementById("modal-form").classList.add("hidden");
+        }
+    };
+
+    // Buscador
     document.getElementById('buscador').addEventListener('input', (e) => {
-        const term = e.target.value.toLowerCase();
-        const filtrados = todosLosDatos.filter(i => 
-            String(i.uf).toLowerCase().includes(term) || 
-            String(i.prop).toLowerCase().includes(term)
+        const v = e.target.value.toLowerCase();
+        const res = departamentos.filter(d => 
+            d.UF.toLowerCase().includes(v) || 
+            (d.Propietario || "").toLowerCase().includes(v)
         );
-        renderizar(filtrados);
+        render(res);
     });
 </script>
 </body>

@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Carga - Actualizado</title>
+    <title>Sistema de Carga - Unificado</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        .btn-home { transition: all 0.2s ease; }
-        .btn-home:active { transform: scale(0.9); }
+        body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
+        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
+        .btn-active:active { transform: scale(0.95); }
     </style>
 </head>
 <body>
@@ -25,99 +25,95 @@
             const [inquilino, setInquilino] = useState('');
             const [monto, setMonto] = useState('');
 
-            // Lógica para que los íconos carguen correctamente
+            // Inicializa los iconos después del renderizado
             useEffect(() => {
-                lucide.createIcons();
-            }, []);
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            }, [inquilino]); // Se refrescan si cambia el estado para asegurar visibilidad
 
-            // Función para volver al HUB (ajustá el "/" por tu ruta real si es necesario)
+            // Función del Botón Home (Casita)
             const irAlHub = () => {
-                console.log("Navegando al Hub Central...");
-                window.location.href = '/'; // Esto te lleva a la raíz
+                // En un index.html puro, esto recarga la página o va a la raíz
+                window.location.href = 'index.html'; 
             };
 
             return (
-                <div className="max-w-md mx-auto min-h-screen flex flex-col p-5">
+                <div className="max-w-md mx-auto min-h-screen flex flex-col p-6">
                     
-                    {/* Header: Botón Casita (Igual a tus otras Apps) */}
-                    <header className="flex items-center justify-between mb-8">
+                    {/* Header: Botón Casita corregido */}
+                    <header className="flex items-center justify-between mb-10">
                         <button 
                             onClick={irAlHub}
-                            className="btn-home p-3 bg-white rounded-2xl shadow-md border border-gray-100 text-blue-500 hover:shadow-lg"
+                            className="btn-active p-3 bg-white rounded-2xl shadow-md border border-gray-100 text-blue-500 hover:text-blue-600 transition-all"
                         >
-                            <i data-lucide="home" style={{width: '24px', height: '24px'}}></i>
+                            <i data-lucide="home"></i>
                         </button>
-                        <h1 className="text-xl font-bold text-gray-700">Carga de Datos</h1>
-                        <div className="w-12"></div> {/* Espaciador central */}
+                        <h1 className="text-xl font-extrabold text-gray-800 tracking-tight">Carga de Datos</h1>
+                        <div className="w-10"></div>
                     </header>
 
                     <div className="space-y-6">
                         
-                        {/* Fila de campos: Inquilino (Manual) e Inquilino (Espejo) */}
+                        {/* Contenedor de Campos Sincronizados */}
                         <div className="grid grid-cols-2 gap-4">
                             
-                            {/* Campo de Entrada Principal */}
+                            {/* Campo 1: Inquilino (Entrada principal) */}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                <label className="text-[11px] font-bold text-gray-400 uppercase ml-1">
                                     Inquilino
                                 </label>
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        value={inquilino}
-                                        onChange={(e) => setInquilino(e.target.value)}
-                                        placeholder="Escribir..."
-                                        className="w-full p-4 bg-white rounded-2xl shadow-sm border border-transparent focus:border-blue-300 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-gray-700"
-                                    />
-                                </div>
+                                <input 
+                                    type="text" 
+                                    value={inquilino}
+                                    onChange={(e) => setInquilino(e.target.value)}
+                                    placeholder="Nombre..."
+                                    className="w-full p-4 bg-white rounded-2xl border-0 shadow-sm focus:ring-2 focus:ring-blue-400 outline-none text-gray-700 font-medium"
+                                />
                             </div>
 
-                            {/* Campo Espejo (Sustituye a Cochera) */}
+                            {/* Campo 2: Inquilino (Espejo - Antes era Cochera) */}
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                <label className="text-[11px] font-bold text-gray-400 uppercase ml-1">
                                     Inquilino
                                 </label>
-                                <div className="relative">
-                                    <input 
-                                        type="text" 
-                                        value={inquilino} // Sincronización automática
-                                        readOnly 
-                                        className="w-full p-4 bg-gray-100 rounded-2xl border border-gray-200 text-gray-400 cursor-not-allowed outline-none font-medium"
-                                    />
-                                </div>
+                                <input 
+                                    type="text" 
+                                    value={inquilino} // Sincronizado 100%
+                                    readOnly 
+                                    placeholder="..."
+                                    className="w-full p-4 bg-gray-100 rounded-2xl border-0 text-gray-400 cursor-not-allowed outline-none italic shadow-inner"
+                                />
                             </div>
                         </div>
 
-                        {/* Campo Monto de Pago */}
+                        {/* Campo de Monto */}
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                            <label className="text-[11px] font-bold text-gray-400 uppercase ml-1">
                                 Monto del Pago
                             </label>
-                            <div className="relative flex items-center">
-                                <span className="absolute left-4 text-gray-400 font-bold">$</span>
+                            <div className="relative">
+                                <span className="absolute left-4 top-4 text-gray-500 font-bold">$</span>
                                 <input 
                                     type="number" 
                                     value={monto}
                                     onChange={(e) => setMonto(e.target.value)}
                                     placeholder="0.00"
-                                    className="w-full p-4 pl-8 bg-white rounded-2xl shadow-sm border border-transparent focus:border-blue-300 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-gray-700 font-bold"
+                                    className="w-full p-4 pl-8 bg-white rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-400 outline-none text-gray-800 font-bold text-lg"
                                 />
                             </div>
                         </div>
 
-                        {/* Botón Guardar */}
+                        {/* Botón de Acción Principal */}
                         <button 
-                            className="w-full bg-blue-500 text-white font-black py-5 rounded-3xl shadow-xl shadow-blue-200 hover:bg-blue-600 active:scale-95 transition-all text-sm tracking-widest mt-4"
+                            className="btn-active w-full bg-blue-500 text-white font-bold py-5 rounded-3xl shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all uppercase tracking-widest text-xs mt-6"
                         >
-                            CONFIRMAR CARGA
+                            Confirmar Carga
                         </button>
                     </div>
 
-                    {/* Info de sistema */}
-                    <footer className="mt-auto py-8 text-center">
-                        <span className="text-[10px] text-gray-300 font-bold tracking-tighter uppercase">
-                            Auto-sync: Inquilino ↔️ Campo_02
-                        </span>
+                    <footer className="mt-auto py-8 text-center text-gray-300 text-[10px] font-medium uppercase tracking-[3px]">
+                        Sincronización de campos ok
                     </footer>
                 </div>
             );

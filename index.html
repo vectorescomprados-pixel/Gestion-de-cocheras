@@ -2,14 +2,18 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>SISTEMA COCHERAS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Carga - Inquilinos</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { background-color: #f3f4f6; font-family: sans-serif; }
+    </style>
 </head>
-<body class="bg-slate-900 text-white font-sans">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -17,65 +21,97 @@
 
         const App = () => {
             const [inquilino, setInquilino] = useState('');
+            const [monto, setMonto] = useState('');
 
-            useEffect(() => {
-                lucide.createIcons();
-            }, [inquilino]);
-
-            // 1. EL BOTÓN DE LA CASITA (Ahora funcional)
+            // Función para volver al HUB (Simulado)
             const irAlHub = () => {
-                window.location.href = 'index.html'; 
+                // Aquí podrías usar window.location.href = '/' si fuera una web real
+                alert("Redirigiendo al Hub Central...");
             };
 
             return (
-                <div className="p-4 max-w-4xl mx-auto">
-                    {/* Header */}
-                    <div className="flex items-center gap-4 mb-6 border-b border-slate-700 pb-4">
+                <div className="max-w-md mx-auto min-h-screen flex flex-col p-4">
+                    
+                    {/* Header con el botón de la casita igual a tus otras apps */}
+                    <header className="flex items-center justify-between mb-8 pt-4">
                         <button 
                             onClick={irAlHub}
-                            className="p-2 border border-slate-600 rounded hover:bg-slate-800 transition-colors"
+                            className="p-3 bg-white rounded-2xl shadow-sm hover:bg-gray-50 active:scale-90 transition-all text-blue-500"
                         >
-                            <i data-lucide="home" class="text-blue-400"></i>
+                            <i data-lucide="home"></i>
                         </button>
-                        <h1 className="text-xl font-bold uppercase tracking-tight">Gestión de Cocheras - Carga</h1>
-                    </div>
+                        <h1 className="text-xl font-bold text-gray-800">Carga de Datos</h1>
+                        <div className="w-12"></div> {/* Balanceador visual */}
+                    </header>
 
-                    {/* 2. CAMPOS SINCRONIZADOS Y RENOMBRADOS */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs font-bold text-slate-400 uppercase">Inquilino</label>
+                    <div className="space-y-6">
+                        {/* Fila de campos duplicados/sincronizados */}
+                        <div className="grid grid-cols-2 gap-4">
+                            
+                            {/* Campo 1: Inquilino (Entrada) */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold text-gray-500 ml-1 uppercase flex items-center gap-2">
+                                    <i data-lucide="user" size="14"></i> Inquilino
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={inquilino}
+                                    onChange={(e) => setInquilino(e.target.value)}
+                                    placeholder="Nombre..."
+                                    className="w-full p-4 bg-white rounded-2xl shadow-sm border-0 focus:ring-2 focus:ring-blue-400 outline-none"
+                                />
+                            </div>
+
+                            {/* Campo 2: Inquilino (Espejo - Antes llamado Cochera) */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold text-gray-500 ml-1 uppercase flex items-center gap-2">
+                                    <i data-lucide="user-check" size="14"></i> Inquilino
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={inquilino} // Sincronizado
+                                    readOnly // No se puede editar aquí
+                                    className="w-full p-4 bg-gray-50 text-gray-400 rounded-2xl shadow-inner border-0 outline-none cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Campo Monto */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-bold text-gray-500 ml-1 uppercase flex items-center gap-2">
+                                <i data-lucide="dollar-sign" size="14"></i> Monto del pago
+                            </label>
                             <input 
-                                type="text" 
-                                value={inquilino}
-                                onChange={(e) => setInquilino(e.target.value)}
-                                className="bg-slate-800 border border-slate-700 p-3 rounded outline-none focus:border-blue-500"
-                                placeholder="Ingrese nombre..."
+                                type="number" 
+                                value={monto}
+                                onChange={(e) => setMonto(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full p-4 bg-white rounded-2xl shadow-sm border-0 focus:ring-2 focus:ring-blue-400 outline-none"
                             />
                         </div>
 
-                        <div className="flex flex-col gap-1">
-                            <label className="text-xs font-bold text-slate-400 uppercase">Inquilino</label>
-                            <input 
-                                type="text" 
-                                value={inquilino} // 3. LO QUE APARECE EN EL PRIMERO, APARECE ACÁ
-                                readOnly 
-                                className="bg-slate-900 border border-slate-800 p-3 rounded text-slate-500 cursor-not-allowed"
-                            />
-                        </div>
-                    </div>
-
-                    {/* Botón de acción simple (Como estaba en tu app) */}
-                    <div className="mt-8">
-                        <button className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded font-bold uppercase text-sm transition-all">
-                            Guardar Carga
+                        {/* Botón de Guardar */}
+                        <button className="w-full bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-600 active:scale-95 transition-all mt-4">
+                            GUARDAR CARGA
                         </button>
                     </div>
+
+                    {/* Footer decorativo */}
+                    <footer className="mt-auto py-6 text-center text-gray-400 text-xs">
+                        Sistema v2.0 - Sincronización activa
+                    </footer>
                 </div>
             );
         };
 
+        // Renderizar la App e inicializar iconos
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
+
+        // Pequeño delay para que Lucide encuentre los elementos después de que React renderice
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 100);
     </script>
 </body>
 </html>

@@ -1,387 +1,119 @@
-﻿<!doctype html>
+﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover" />
-  <title>GestiónUF Pro</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISTEMA COCHERAS - LISTADO</title>
+    <style>
+        body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
+        .header { position: sticky; top: 0; background: #0b141a; padding-bottom: 15px; z-index: 100; border-bottom: 1px solid #2a3942; }
+        
+        .search-box { 
+            width: 100%; 
+            padding: 12px 15px; 
+            background: #202c33; 
+            border: 1px solid #2a3942; 
+            border-radius: 10px; 
+            color: white; 
+            font-size: 16px; 
+            box-sizing: border-box;
+            outline: none;
+            margin-top: 10px;
+        }
+        .search-box:focus { border-color: #00a884; }
 
-  <style>
-    :root{
-      --bg:#0b141a;
-      --card:#111b21;
-      --text:#e9edef;
-      --muted:rgba(233,237,239,.75);
-      --border:#222d34;
-      --primary:#2563eb;
-      --danger:#e11d48;
-      --success:#22c55e;
-      --warning:#f59e0b;
-    }
-    body.light-mode{
-      --bg:#f0f2f5;
-      --card:#ffffff;
-      --text:#1f293b;
-      --muted:rgba(31,41,55,.75);
-      --border:#e5e7eb;
-      --primary:#2563eb;
-      --danger:#e11d48;
-      --success:#16a34a;
-      --warning:#d97706;
-    }
+        #lista { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 12px; 
+            margin-top: 20px;
+        }
 
-    *{ box-sizing:border-box; margin:0; padding:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif; }
-    body{ background:var(--bg); color:var(--text); display:flex; justify-content:center; min-height:100vh; overflow-x:hidden; }
-    .wrap{ width:95%; max-width:460px; position:relative; }
-    .hidden{ display:none !important; }
+        .card { 
+            background: #111b21; 
+            padding: 15px; 
+            border-radius: 8px; 
+            border-left: 5px solid #00a884;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
 
-    /* Botón HOME flotante (sin login, pero lo dejamos bien “tipo otras apps”) */
-    .btn-home-fixed{
-      position:fixed;
-      bottom:30px;
-      right:25px;
-      z-index:20001;
-      pointer-events:auto;
+        .uf-num { font-weight: bold; color: #00a884; font-size: 1.2em; margin-bottom: 4px; }
+        .prop-name { color: #e9edef; font-size: 1.1em; margin-bottom: 4px; }
+        .cochera-info { color: #8696a0; font-size: 0.9em; }
 
-      width:64px;
-      height:64px;
-      border-radius:50%;
-
-      display:flex;
-      align-items:center;
-      justify-content:center;
-
-      background:var(--primary);
-      color:#fff;
-      text-decoration:none;
-
-      border:3px solid rgba(255,255,255,.9);
-      box-shadow:0 12px 30px rgba(0,0,0,.55);
-
-      transition:transform .12s ease, filter .12s ease;
-    }
-    .btn-home-fixed:hover{ transform:translateY(-2px); filter:brightness(1.05); }
-
-    /* Header fijo */
-    .main-header{
-      position:fixed;
-      top:0;
-      width:95%;
-      max-width:460px;
-      background:var(--card);
-      z-index:1000;
-      padding:14px;
-      border-bottom:4px solid var(--primary);
-      border-radius:0 0 18px 18px;
-    }
-    .content-body{ margin-top:310px; padding-bottom:120px; }
-
-    .status-line{
-      font-size:11px;
-      text-align:center;
-      margin-bottom:12px;
-      color:var(--success);
-      letter-spacing:.2px;
-    }
-
-    .grid-btns{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:10px; }
-    .btn{
-      height:46px;
-      border-radius:12px;
-      border:none;
-      font-weight:800;
-      font-size:11px;
-      cursor:pointer;
-      color:white;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:6px;
-      text-transform:uppercase;
-      user-select:none;
-    }
-    .primary{ background:var(--primary); }
-    .danger{ background:var(--danger); }
-    .ghost{ background:#475569; }
-    .warning{ background:var(--warning); color:#111; }
-
-    input{
-      width:100%;
-      height:48px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      padding:0 14px;
-      background:var(--bg);
-      color:var(--text);
-      outline:none;
-      font-size:15px;
-    }
-
-    #log-container{
-      background:#000;
-      padding:10px;
-      border-radius:12px;
-      margin-bottom:12px;
-      font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:11px;
-      height:105px;
-      overflow:auto;
-      border:1px solid #333;
-    }
-    .log-success{ color:#00ff41; }
-    .log-info{ color:#00d4ff; }
-    .log-warn{ color:#f59e0b; }
-    .log-err{ color:#ff3131; }
-
-    .item{
-      background:var(--card);
-      border-radius:15px;
-      padding:16px;
-      margin-bottom:12px;
-      border:1px solid var(--border);
-      border-left:10px solid var(--success);
-    }
-    .item b{ font-size:18px; color:#60a5fa; display:block; }
-    .item small{ display:block; margin-top:2px; color:var(--muted); }
-
-    .details{
-      margin-top:10px;
-      padding-top:10px;
-      border-top:1px dashed rgba(148,163,184,.35);
-      font-size:13px;
-      line-height:1.55;
-    }
-
-    .row-actions{ display:flex; gap:10px; margin-top:12px; }
-    .row-actions .btn{ flex:1; height:42px; font-size:11px; }
-
-    /* Modal formulario */
-    .modal{
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.85);
-      z-index:12000;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:18px;
-    }
-    .modal-content{
-      width:100%;
-      max-width:420px;
-      background:var(--card);
-      border:1px solid var(--border);
-      border-radius:18px;
-      padding:18px;
-    }
-    .modal-title{
-      font-weight:900;
-      margin-bottom:12px;
-      color:var(--text);
-    }
-    .modal-actions{ display:flex; gap:10px; margin-top:10px; }
-    .modal-actions .btn{ flex:1; }
-    .hint{ font-size:12px; color:var(--muted); margin:-6px 0 10px 0; }
-  </style>
+        .no-results { text-align: center; color: #8696a0; margin-top: 50px; }
+    </style>
 </head>
-
 <body>
-  <!-- Import CSV -->
-  <input type="file" id="csv-file" class="hidden" accept=".csv" />
 
-  <!-- Botón HUB central -->
-  <a class="btn-home-fixed"
-     href="https://vectorescomprados-pixel.github.io/Gestion-de-Consorcios/"
-     title="Volver al HUB central"
-     aria-label="Volver al HUB central">
-    <i class="fa-solid fa-house" style="font-size:26px;"></i>
-  </a>
+<div class="header">
+    <h2 style="margin: 10px 0; color: #e9edef;">Cocheras Edificio</h2>
+    <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF o Nombre...">
+</div>
 
-  <div id="app" class="wrap">
-    <div class="main-header">
-      <div class="status-line">● EN LÍNEA</div>
+<div id="lista">
+    <p style="text-align:center; color:#8696a0;">Conectando con la base de datos...</p>
+</div>
 
-      <div class="grid-btns">
-        <button id="btn-log-toggle" class="btn primary"><i class="fa-solid fa-terminal"></i> Logs</button>
-        <button id="btn-theme" class="btn primary"><i class="fa-solid fa-circle-half-stroke"></i> Tema</button>
-        <button id="btn-refresh" class="btn ghost"><i class="fa-solid fa-rotate"></i> Refrescar</button>
-      </div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getFirestore, collection, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-      <div class="grid-btns">
-        <button id="btn-add" class="btn primary"><i class="fa-solid fa-plus"></i> Nueva UF</button>
-        <button id="btn-import" class="btn primary"><i class="fa-solid fa-file-import"></i> Importar</button>
-        <button id="btn-export" class="btn primary"><i class="fa-solid fa-file-export"></i> Respaldo</button>
-      </div>
-
-      <input id="search-input" placeholder="Buscar por UF, Propietario o Inquilino..." />
-
-      <div id="log-container" class="hidden"></div>
-    </div>
-
-    <div class="content-body">
-      <div id="list"></div>
-    </div>
-  </div>
-
-  <!-- Modal Alta/Edición -->
-  <div id="modal-form" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modal-content">
-      <div id="modal-title" class="modal-title">Nueva UF</div>
-
-      <input id="f-uf" placeholder="UF (ej: 0001)" inputmode="numeric" />
-      <div class="hint">Se normaliza a 4 dígitos (0001, 0012, 0100, ...).</div>
-
-      <input id="f-prop" placeholder="Propietario" />
-      <!-- Pediste: lo que aparecía como Inquilino ahora se guarda en campo Cochera,
-           y el rótulo visible debe decir Inquilino -->
-      <input id="f-inq-ui" placeholder="Inquilino" />
-      <input id="f-patente" placeholder="Patente (opcional)" />
-
-      <div class="modal-actions">
-        <button id="btn-save" class="btn primary"><i class="fa-solid fa-floppy-disk"></i> Guardar</button>
-        <button id="btn-cancel" class="btn danger"><i class="fa-solid fa-xmark"></i> Cancelar</button>
-      </div>
-    </div>
-  </div>
-
-  <script type="module">
-    /***********************
-     * FIREBASE (MODULAR)
-     ***********************/
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-    import {
-      getFirestore, collection, doc, setDoc, deleteDoc,
-      onSnapshot, query, orderBy, writeBatch, getDocs
-    } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
-
-    // TODO: PEGÁ ACÁ TU CONFIG REAL
-    const firebaseConfig = {
-      apiKey: "REEMPLAZAR",
-      authDomain: "REEMPLAZAR",
-      projectId: "REEMPLAZAR",
-      storageBucket: "REEMPLAZAR",
-      messagingSenderId: "REEMPLAZAR",
-      appId: "REEMPLAZAR"
+    const config = { 
+        apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo", 
+        authDomain: "gestionuf-remoto.firebaseapp.com", 
+        projectId: "gestionuf-remoto", 
+        storageBucket: "gestionuf-remoto.firebasestorage.app", 
+        messagingSenderId: "724452752860", 
+        appId: "1:724452752860:web:4d25585addcdcbd146e319" 
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app = initializeApp(config);
     const db = getFirestore(app);
+    const colRef = collection(db, "cocheras_edificio");
 
-    // Colección usada por esta app
-    const COL = "cocheras_edificio"; // si tu colección se llama distinto, cambialo acá
+    let todosLosDatos = [];
 
-    /***********************
-     * UI HELPERS
-     ***********************/
-    const $ = (id) => document.getElementById(id);
-
-    const logBox = $("log-container");
-    function logLine(msg, cls = "log-info") {
-      const div = document.createElement("div");
-      div.className = cls;
-      div.textContent = msg;
-      logBox.appendChild(div);
-      logBox.scrollTop = logBox.scrollHeight;
-    }
-
-    function normalizeUF(value) {
-      const n = String(value ?? "").match(/\d+/)?.[0] ?? "";
-      if (!n) return "";
-      return String(n).padStart(4, "0");
-    }
-
-    function escapeHtml(s) {
-      return String(s ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
-
-    /***********************
-     * THEME
-     ***********************/
-    const savedTheme = localStorage.getItem("theme") || "dark";
-    if (savedTheme === "light") document.body.classList.add("light-mode");
-
-    $("btn-theme").addEventListener("click", () => {
-      document.body.classList.toggle("light-mode");
-      localStorage.setItem("theme", document.body.classList.contains("light-mode") ? "light" : "dark");
+    // 1. Escuchar datos en tiempo real
+    onSnapshot(query(colRef, orderBy("uf")), (snap) => {
+        todosLosDatos = snap.docs.map(d => d.data());
+        renderizar(todosLosDatos);
     });
 
-    /***********************
-     * LOGS TOGGLE
-     ***********************/
-    $("btn-log-toggle").addEventListener("click", () => {
-      logBox.classList.toggle("hidden");
-    });
+    // 2. Función para dibujar las tarjetas (LIMPIEZA INCLUIDA)
+    function renderizar(datos) {
+        const contenedor = document.getElementById('lista');
+        
+        // ESTA LÍNEA EVITA LOS DUPLICADOS:
+        contenedor.innerHTML = ""; 
 
-    /***********************
-     * MODAL FORM
-     ***********************/
-    let editingId = null;
+        if (datos.length === 0) {
+            contenedor.innerHTML = '<div class="no-results">No se encontraron coincidencias.</div>';
+            return;
+        }
 
-    function openForm(docId = null, data = null) {
-      editingId = docId;
-      $("modal-title").textContent = docId ? `Editar UF ${data?.uf ?? ""}` : "Nueva UF";
-
-      $("f-uf").value = data?.uf ?? "";
-      $("f-prop").value = data?.prop ?? "";
-
-      // UI “Inquilino”:
-      // Guardamos en Firestore en campo "Cochera".
-      // Mostramos compatibilidad: si existe Inquilino viejo, lo usamos como fallback.
-      const inqVisible = data?.Cochera ?? data?.Inquilino ?? "";
-      $("f-inq-ui").value = inqVisible;
-
-      $("f-patente").value = data?.patente ?? "";
-
-      $("modal-form").classList.remove("hidden");
+        // Dibujamos cada tarjeta
+        datos.forEach(i => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.innerHTML = `
+                <div class="uf-num">UF ${i.uf}</div>
+                <div class="prop-name">${i.prop}</div>
+                <div class="cochera-info">Asignada: ${i.cochera}</div>
+            `;
+            contenedor.appendChild(card);
+        });
     }
 
-    function closeForm() {
-      $("modal-form").classList.add("hidden");
-      editingId = null;
-    }
-
-    $("btn-add").addEventListener("click", () => openForm());
-    $("btn-cancel").addEventListener("click", closeForm);
-
-    $("btn-save").addEventListener("click", async () => {
-      const uf = normalizeUF($("f-uf").value);
-      const prop = $("f-prop").value.trim();
-      const inqUI = $("f-inq-ui").value.trim();
-      const patente = $("f-patente").value.trim();
-
-      if (!uf) return alert("UF inválida. Ej: 0001");
-      if (!prop) return alert("Propietario requerido.");
-
-      const id = "UF-" + uf;
-      const ref = doc(db, COL, id);
-
-      // Pedido: “lo que aparece en Inquilino -> que aparezca en Cochera”
-      // + “reemplazar el nombre Cochera por Inquilino” (eso es UI).
-      const payload = {
-        uf,
-        prop,
-        Cochera: inqUI,     // <-- guardamos el Inquilino (UI) en el campo Cochera
-        patente: patente || ""
-      };
-
-      try {
-        await setDoc(ref, payload, { merge: true });
-        logLine(`✅ Guardado ${id}`, "log-success");
-        closeForm();
-      } catch (e) {
-        console.error(e);
-        logLine(`❌ Error guardando ${id}: ${e.message}`, "log-err");
-        alert("Error guardando en Firebase. Revisá consola.");
-      }
+    // 3. Filtro del buscador
+    document.getElementById('buscador').addEventListener('input', (e) => {
+        const busqueda = e.target.value.toLowerCase();
+        const filtrados = todosLosDatos.filter(i => {
+            return i.uf.includes(busqueda) || i.prop.toLowerCase().includes(busqueda);
+        });
+        renderizar(filtrados);
     });
 
-    /***********************
-     * RENDER LIST (REALTIME)
-     ***********************/
-    const listEl = $("list");
-    let cache
+</script>
+</body>
+</html>

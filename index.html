@@ -2,57 +2,163 @@
 <html lang="es">
 <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0">
-    <title>SISTEMA COCHERAS - FINAL V2</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0, viewport-fit=cover">
+    <title>SISTEMA COCHERAS - ENTERPRISE V4</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root { --bg: #0b141a; --card: #111b21; --primary: #3b82f6; --text: #e9edef; --border: #222d34; --success: #16a34a; }
-        body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; padding: 15px; margin: 0; scroll-behavior: smooth; }
+        :root { 
+            --bg: #0b141a; 
+            --card: #111b21; 
+            --primary: #3b82f6; 
+            --text: #e9edef; 
+            --border: #222d34; 
+            --success: #16a34a;
+            --danger: #ef4444;
+        }
+
+        /* RESET Y BLINDAJE DE PANTALLA */
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
         
-        /* HEADER */
-        .header { position: sticky; top: 0; background: var(--bg); padding-bottom: 15px; z-index: 1000; border-bottom: 1px solid var(--border); }
-        .search-box { width: 100%; padding: 12px 15px; background: #202c33; border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 16px; outline: none; margin-top: 10px; }
-        
-        #lista { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; padding-bottom: 100px; }
-        
-        /* CARDS */
-        .card { background: var(--card); padding: 20px; border-radius: 15px; border: 1px solid var(--border); border-left: 5px solid var(--primary); }
-        .card-header { display: flex; justify-content: space-between; align-items: flex-start; }
-        .uf-title { color: var(--primary); font-weight: bold; font-size: 1.25em; margin: 0; }
-        .prop-main { color: var(--text); font-size: 1.1em; margin-top: 5px; display: block; }
-        .header-icons { display: flex; gap: 18px; font-size: 1.3em; cursor: pointer; }
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            display: flex; 
+            justify-content: center; 
+            min-height: 100vh; 
+            overflow-x: hidden; 
+            padding: 0 10px;
+        }
+
+        /* Contenedor Principal Adaptable (PC y Móvil) */
+        .main-container {
+            width: 100%;
+            max-width: 500px; /* Evita que se estire en monitores de PC */
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER FIJO Y RESPONSIVE */
+        .header { 
+            position: sticky; 
+            top: 0; 
+            background: var(--bg); 
+            padding: 15px 0; 
+            z-index: 1000; 
+            border-bottom: 1px solid var(--border);
+        }
+
+        .search-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .search-box { 
+            flex: 1;
+            padding: 12px 15px; 
+            background: #202c33; 
+            border: 1px solid var(--border); 
+            border-radius: 10px; 
+            color: white; 
+            font-size: 16px; 
+            outline: none;
+        }
+
+        .btn-search-icon {
+            background: var(--primary);
+            border: none;
+            border-radius: 10px;
+            width: 50px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        /* LISTADO BLINDADO */
+        #lista { 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            margin-top: 20px; 
+            padding-bottom: 120px; 
+        }
+
+        /* TARJETAS RESPONSIVE */
+        .card { 
+            background: var(--card); 
+            padding: 18px; 
+            border-radius: 15px; 
+            border: 1px solid var(--border); 
+            border-left: 6px solid var(--primary);
+            width: 100%; /* Se adapta al contenedor max-width */
+        }
+
+        .card-header { display: flex; justify-content: space-between; align-items: center; }
+        .uf-title { color: var(--primary); font-weight: bold; font-size: 1.2em; }
+        .header-icons { display: flex; gap: 20px; font-size: 1.3em; cursor: pointer; }
+
         .card-body { display: none; margin-top: 15px; border-top: 1px dashed #4b5563; padding-top: 15px; }
         .card.expanded .card-body { display: block; }
+
+        .data-line { margin-bottom: 10px; font-size: 0.95em; }
+        .label-blue { color: var(--primary); font-weight: bold; margin-right: 5px; }
 
         /* BOTONES FLOTANTES */
         .float-btn {
             position: fixed; width: 55px; height: 55px; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            color: white; font-size: 24px; box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            color: white; font-size: 24px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             cursor: pointer; z-index: 2000; border: 2px solid white; text-decoration: none;
         }
-        .btn-rocket { bottom: 90px; right: 20px; background: #f97316; display: none; } /* Oculto al inicio */
-        .btn-home { bottom: 20px; right: 20px; background: #2563eb; }
+        .btn-rocket { bottom: 85px; right: calc(50% - 240px); background: #f97316; display: none; }
+        .btn-home { bottom: 20px; right: calc(50% - 240px); background: #2563eb; }
 
-        /* MODAL */
-        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; }
-        .modal input { width: 100%; height: 45px; margin-bottom: 10px; border-radius: 10px; border: 1px solid var(--border); padding: 0 12px; background: #0b141a; color: white; }
-        .hidden { display: none !important; }
-        
-        /* ESTILOS BOTONES ACCIÓN */
-        .card-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .btn-ui { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 10px; border: none; font-weight: bold; color: white; text-transform: uppercase; font-size: 0.85em; cursor: pointer; text-decoration: none; }
+        /* Ajuste de botones flotantes para móviles */
+        @media (max-width: 500px) {
+            .btn-rocket { right: 20px; }
+            .btn-home { right: 20px; }
+        }
+
+        /* MODAL BLINDADO */
+        .modal { 
+            position: fixed; inset: 0; background: rgba(0,0,0,0.9); 
+            z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 15px; 
+        }
+        .modal-content { 
+            background: var(--card); padding: 25px; border-radius: 20px; 
+            width: 100%; max-width: 400px; border: 1px solid var(--border); 
+        }
+        .modal input { 
+            width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; 
+            border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; 
+        }
+
+        .btn-ui { 
+            display: flex; align-items: center; justify-content: center; gap: 8px; 
+            padding: 14px; border-radius: 10px; border: none; font-weight: bold; 
+            color: white; text-transform: uppercase; font-size: 0.85em; cursor: pointer; text-decoration: none; 
+        }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <h2 style="margin: 10px 0;">Cocheras Edificio (0-87)</h2>
-    <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF o Apellido...">
-</div>
+<div class="main-container">
+    <div class="header">
+        <h2 style="text-align: center; font-size: 1.4em;">Cocheras Edificio</h2>
+        <div class="search-group">
+            <input type="text" id="buscador" class="search-box" placeholder="UF o Apellido...">
+            <button id="btn-ejecutar-busqueda" class="btn-search-icon">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </div>
 
-<div id="lista"></div>
+    <div id="lista"></div>
+</div>
 
 <div id="go-top" class="float-btn btn-rocket" onclick="window.scrollTo(0,0)">
     <i class="fas fa-rocket"></i>
@@ -63,15 +169,15 @@
 
 <div id="modal-form" class="modal hidden">
     <div class="modal-content">
-        <h3>Editar Registro</h3><br>
-        <input id="f-uf" placeholder="UF">
+        <h3 style="margin-bottom:20px; text-align:center; color:var(--primary)">Editar Cochera</h3>
+        <input id="f-uf" placeholder="UF (0-87)">
         <input id="f-prop" placeholder="Propietario">
         <input id="f-telp" placeholder="Tel. Propietario">
         <input id="f-inq" placeholder="Inquilino">
         <input id="f-teli" placeholder="Tel. Inquilino">
-        <div style="display: flex; gap: 10px; margin-top: 10px;">
-            <button id="btn-save" class="btn-ui" style="flex:1; background:#2563eb">GUARDAR</button>
-            <button id="btn-cancel" class="btn-ui" style="flex:1; background:#475569">VOLVER</button>
+        <div style="display: flex; gap: 10px;">
+            <button id="btn-save" class="btn-ui" style="flex:1; background:var(--primary)">GUARDAR</button>
+            <button id="btn-cancel" class="btn-ui" style="flex:1; background:#475569">CANCELAR</button>
         </div>
     </div>
 </div>
@@ -88,21 +194,22 @@
 
     const app = initializeApp(config);
     const db = getFirestore(app);
-    const colRef = collection(db, "departamentos"); 
+    const colRef = collection(db, "departamentos");
 
     let departamentos = [];
     let editId = null;
 
-    // Sincronización con FILTRO DE RANGO (0 a 87)
+    // Sincronización Blindada (Rango 0-87)
     onSnapshot(query(colRef, orderBy("UF", "asc")), (snap) => {
-        // Filtramos para que solo entren UFs entre 0 y 87
-        departamentos = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .filter(d => {
-                const numUF = parseInt(d.UF);
-                return numUF >= 0 && numUF <= 87;
-            });
-        render(departamentos);
+        try {
+            departamentos = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => {
+                    const n = parseInt(d.UF);
+                    return n >= 0 && n <= 87; // Solo cocheras
+                });
+            render(departamentos);
+        } catch (e) { console.error("Error cargando datos:", e); }
     });
 
     function render(data) {
@@ -114,21 +221,23 @@
             card.id = `card-${d.id}`;
             card.innerHTML = `
                 <div class="card-header">
-                    <div class="uf-info">
-                        <h3 class="uf-title">UF: ${d.UF}</h3>
-                        <span class="prop-main">${d.Propietario || 'S/D'}</span>
+                    <div>
+                        <div class="uf-title">UF: ${d.UF || '---'}</div>
+                        <div style="font-size: 1.1em; margin-top:4px;">${d.Propietario || 'S/D'}</div>
                     </div>
                     <div class="header-icons">
-                        <i class="fas fa-eye" style="color:#d1d5db" onclick="window.toggleExpand('${d.id}')"></i>
-                        <i class="fas fa-edit" style="color:#3b82f6" onclick="window.editUF('${d.id}')"></i>
+                        <i class="fas fa-eye" style="color:#8696a0" onclick="window.toggleExpand('${d.id}')"></i>
+                        <i class="fas fa-edit" style="color:var(--primary)" onclick="window.editUF('${d.id}')"></i>
                     </div>
                 </div>
                 <div class="card-body">
-                    <p><strong>Prop:</strong> ${d.Propietario || '-'} | <strong>Tel:</strong> ${d.TelefonoPropietario || 'N/C'}</p>
-                    <p><strong>Inq:</strong> ${d.Inquilino || '-'} | <strong>Tel:</strong> ${d.TelefonoInquilino || 'N/C'}</p>
-                    <div class="card-actions">
-                        <a href="tel:${d.TelefonoInquilino || d.TelefonoPropietario}" class="btn-ui" style="background:#2563eb"><i class="fas fa-phone"></i> LLAMAR</a>
-                        <a href="https://wa.me/${String(d.TelefonoInquilino || d.TelefonoPropietario).replace(/[^0-9]/g, '')}" target="_blank" class="btn-ui" style="background:#16a34a"><i class="fab fa-whatsapp"></i> CHAT</a>
+                    <div class="data-line"><span class="label-blue">Prop:</span> ${d.Propietario || '-'}</div>
+                    <div class="data-line"><span class="label-blue">Tel:</span> ${d.TelefonoPropietario || 'N/C'}</div>
+                    <div class="data-line"><span class="label-blue">Inq:</span> ${d.Inquilino || '-'}</div>
+                    <div class="data-line"><span class="label-blue">Tel:</span> ${d.TelefonoInquilino || 'N/C'}</div>
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:15px;">
+                        <a href="tel:${d.TelefonoInquilino || d.TelefonoPropietario}" class="btn-ui" style="background:var(--primary)"><i class="fas fa-phone"></i> LLAMAR</a>
+                        <a href="https://wa.me/${String(d.TelefonoInquilino || d.TelefonoPropietario).replace(/[^0-9]/g, '')}" target="_blank" class="btn-ui" style="background:var(--success)"><i class="fab fa-whatsapp"></i> CHAT</a>
                     </div>
                 </div>
             `;
@@ -136,18 +245,32 @@
         });
     }
 
-    // Mostrar/Ocultar Cohete según el scroll
-    window.onscroll = () => {
-        const btn = document.getElementById("go-top");
-        btn.style.display = (window.scrollY > 300) ? "flex" : "none";
+    // Lógica de búsqueda (Boton y Enter)
+    const ejecutarBusqueda = () => {
+        const v = document.getElementById('buscador').value.toLowerCase();
+        const res = departamentos.filter(d => 
+            String(d.UF).toLowerCase().includes(v) || 
+            (d.Propietario || "").toLowerCase().includes(v)
+        );
+        render(res);
     };
 
-    window.toggleExpand = (id) => document.getElementById(`card-${id}`).classList.toggle('expanded');
+    document.getElementById('btn-ejecutar-busqueda').onclick = ejecutarBusqueda;
+    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") ejecutarBusqueda(); };
 
+    // Scroll Control (Cohete)
+    window.onscroll = () => {
+        const btn = document.getElementById("go-top");
+        btn.style.display = (window.scrollY > 400) ? "flex" : "none";
+    };
+
+    // Funciones Globales
+    window.toggleExpand = (id) => document.getElementById(`card-${id}`).classList.toggle('expanded');
     window.editUF = (id) => {
         const d = departamentos.find(x => x.id === id);
+        if(!d) return;
         editId = id;
-        document.getElementById("f-uf").value = d.UF;
+        document.getElementById("f-uf").value = d.UF || "";
         document.getElementById("f-prop").value = d.Propietario || "";
         document.getElementById("f-telp").value = d.TelefonoPropietario || "";
         document.getElementById("f-inq").value = d.Inquilino || "";
@@ -156,24 +279,17 @@
     };
 
     document.getElementById("btn-cancel").onclick = () => document.getElementById("modal-form").classList.add("hidden");
-
     document.getElementById("btn-save").onclick = async () => {
-        const newData = {
+        const d = {
             UF: document.getElementById("f-uf").value,
             Propietario: document.getElementById("f-prop").value,
             TelefonoPropietario: document.getElementById("f-telp").value,
             Inquilino: document.getElementById("f-inq").value,
             TelefonoInquilino: document.getElementById("f-teli").value
         };
-        await updateDoc(doc(db, "departamentos", editId), newData);
+        await updateDoc(doc(db, "departamentos", editId), d);
         document.getElementById("modal-form").classList.add("hidden");
     };
-
-    document.getElementById('buscador').addEventListener('input', (e) => {
-        const v = e.target.value.toLowerCase();
-        const res = departamentos.filter(d => d.UF.toLowerCase().includes(v) || (d.Propietario||"").toLowerCase().includes(v));
-        render(res);
-    });
 </script>
 </body>
 </html>

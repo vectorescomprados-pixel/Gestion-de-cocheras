@@ -4,6 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0, viewport-fit=cover">
     <title>SISTEMA COCHERAS - V9 AUTO</title>
+
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0b141a">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icono-192.png">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
@@ -200,6 +208,15 @@
     };
 
     window.onscroll = () => { document.getElementById("go-top").style.display = (window.scrollY > 400) ? "flex" : "none"; };
+
+    // REGISTRO DE SERVICE WORKER PARA MODO PWA NATIVO
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW Activado para Cocheras'))
+                .catch(err => console.error('Error SW Cocheras', err));
+        });
+    }
 </script>
 </body>
 </html>

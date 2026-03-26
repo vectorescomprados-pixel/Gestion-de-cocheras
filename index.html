@@ -1,154 +1,130 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - CARGA FINAL</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Carga - Actualizado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 80px; }
-        
-        /* BOTÓN CASITA (HOME) - ESTILO FLOTANTE */
-        .btn-home { 
-            position: fixed; top: 15px; left: 15px; background: #202c33; color: #00a884; 
-            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; text-decoration: none; font-size: 24px; border: 1px solid #2a3942;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; transition: 0.3s;
-        }
-        .btn-home:hover { background: #2a3942; transform: scale(1.1); }
-
-        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; outline: none; }
-        .row { display: flex; gap: 12px; margin: 15px 0; }
-        button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        .danger { background: #ff3b30; color: white; }
-        .primary { background: #00a884; color: white; }
-        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; }
-        th, td { border: 1px solid #2a3942; padding: 12px; text-align: left; font-size: 14px; }
-        th { background: #202c33; color: #00a884; text-transform: uppercase; font-size: 12px; }
-        .inq-sub { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
-        b { color: #e9edef; }
+        body { background-color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .btn-home { transition: all 0.2s ease; }
+        .btn-home:active { transform: scale(0.9); }
     </style>
 </head>
 <body>
+    <div id="root"></div>
 
-    <a href="index.html" class="btn-home" title="Volver al HUB">🏠</a>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-    <h3>Carga Masiva de Unidades</h3>
-    <div id="status">Estado: Listo para recibir tus 87 líneas</div>
+        const App = () => {
+            const [inquilino, setInquilino] = useState('');
+            const [monto, setMonto] = useState('');
 
-    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
+            // Lógica para que los íconos carguen correctamente
+            useEffect(() => {
+                lucide.createIcons();
+            }, []);
 
-    <div class="row">
-        <button class="primary" onclick="window.cargar()">Subir Datos</button>
-        <button class="danger" onclick="window.limpiar()">Limpiar Nube</button>
-    </div>
+            // Función para volver al HUB (ajustá el "/" por tu ruta real si es necesario)
+            const irAlHub = () => {
+                console.log("Navegando al Hub Central...");
+                window.location.href = '/'; // Esto te lleva a la raíz
+            };
 
-    <table>
-        <thead>
-            <tr>
-                <th>UF</th>
-                <th>Propietario / Inquilino</th>
-                <th>Cochera</th>
-            </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-    </table>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, writeBatch, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo",
-            authDomain: "gestionuf-remoto.firebaseapp.com",
-            projectId: "gestionuf-remoto",
-            storageBucket: "gestionuf-remoto.firebasestorage.app",
-            messagingSenderId: "724452752860",
-            appId: "1:724452752860:web:4d25585addcdcbd146e319"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const colRef = collection(db, "cocheras_edificio");
-
-        window.cargar = async () => {
-            const area = document.getElementById("csv-input");
-            const texto = area.value.trim();
-            if(!texto) return alert("Pega los datos antes de subir.");
-
-            const status = document.getElementById("status");
-            status.innerText = "⌛ Procesando 87 líneas de forma segura...";
-
-            const lineas = texto.split("\n");
-            const batch = writeBatch(db);
-            let contador = 0;
-
-            lineas.forEach(linea => {
-                if(!linea.trim()) return; // Ignora líneas vacías
-                
-                const columnas = linea.split(",");
-                let encontroUF = linea.match(/\d+/);
-                
-                if (encontroUF) {
-                    let ufNum = String(encontroUF);
-                    let ufID = ufNum.padStart(4, '0');
+            return (
+                <div className="max-w-md mx-auto min-h-screen flex flex-col p-5">
                     
-                    // SEGURIDAD TOTAL: Convertimos a String antes de limpiar espacios
-                    let prop = columnas ? String(columnas).trim() : "S/D";
-                    let inq = columnas ? String(columnas).trim() : "";
+                    {/* Header: Botón Casita (Igual a tus otras Apps) */}
+                    <header className="flex items-center justify-between mb-8">
+                        <button 
+                            onClick={irAlHub}
+                            className="btn-home p-3 bg-white rounded-2xl shadow-md border border-gray-100 text-blue-500 hover:shadow-lg"
+                        >
+                            <i data-lucide="home" style={{width: '24px', height: '24px'}}></i>
+                        </button>
+                        <h1 className="text-xl font-bold text-gray-700">Carga de Datos</h1>
+                        <div className="w-12"></div> {/* Espaciador central */}
+                    </header>
 
-                    const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                    batch.set(docRef, {
-                        uf: ufID,
-                        prop: prop,
-                        inquilino: inq,
-                        cochera: ufNum,
-                        patente: ""
-                    }, { merge: true });
-                    contador++;
-                }
-            });
+                    <div className="space-y-6">
+                        
+                        {/* Fila de campos: Inquilino (Manual) e Inquilino (Espejo) */}
+                        <div className="grid grid-cols-2 gap-4">
+                            
+                            {/* Campo de Entrada Principal */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    Inquilino
+                                </label>
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        value={inquilino}
+                                        onChange={(e) => setInquilino(e.target.value)}
+                                        placeholder="Escribir..."
+                                        className="w-full p-4 bg-white rounded-2xl shadow-sm border border-transparent focus:border-blue-300 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-gray-700"
+                                    />
+                                </div>
+                            </div>
 
-            try {
-                await batch.commit();
-                status.style.color = "#00a884";
-                status.innerText = "✅ ¡Éxito! Se cargaron " + contador + " unidades.";
-                area.value = "";
-            } catch (e) {
-                status.style.color = "#ff3b30";
-                status.innerText = "❌ Error en Firebase: " + e.message;
-            }
+                            {/* Campo Espejo (Sustituye a Cochera) */}
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                    Inquilino
+                                </label>
+                                <div className="relative">
+                                    <input 
+                                        type="text" 
+                                        value={inquilino} // Sincronización automática
+                                        readOnly 
+                                        className="w-full p-4 bg-gray-100 rounded-2xl border border-gray-200 text-gray-400 cursor-not-allowed outline-none font-medium"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Campo Monto de Pago */}
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">
+                                Monto del Pago
+                            </label>
+                            <div className="relative flex items-center">
+                                <span className="absolute left-4 text-gray-400 font-bold">$</span>
+                                <input 
+                                    type="number" 
+                                    value={monto}
+                                    onChange={(e) => setMonto(e.target.value)}
+                                    placeholder="0.00"
+                                    className="w-full p-4 pl-8 bg-white rounded-2xl shadow-sm border border-transparent focus:border-blue-300 focus:ring-4 focus:ring-blue-100 outline-none transition-all text-gray-700 font-bold"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Botón Guardar */}
+                        <button 
+                            className="w-full bg-blue-500 text-white font-black py-5 rounded-3xl shadow-xl shadow-blue-200 hover:bg-blue-600 active:scale-95 transition-all text-sm tracking-widest mt-4"
+                        >
+                            CONFIRMAR CARGA
+                        </button>
+                    </div>
+
+                    {/* Info de sistema */}
+                    <footer className="mt-auto py-8 text-center">
+                        <span className="text-[10px] text-gray-300 font-bold tracking-tighter uppercase">
+                            Auto-sync: Inquilino ↔️ Campo_02
+                        </span>
+                    </footer>
+                </div>
+            );
         };
 
-        window.limpiar = async () => {
-            if(!confirm("¿Borrar todos los datos de la nube?")) return;
-            const status = document.getElementById("status");
-            status.innerText = "🗑️ Limpiando base de datos...";
-            const snap = await getDocs(colRef);
-            const batch = writeBatch(db);
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            status.innerText = "✅ Base vaciada.";
-        };
-
-        onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-            const tbody = document.getElementById("tbody");
-            tbody.innerHTML = "";
-            snap.forEach(d => {
-                const data = d.data();
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td style="color:#00a884;"><b>${data.uf}</b></td>
-                    <td>
-                        <b>${data.prop}</b>
-                        ${data.inquilino ? '<span class="inq-sub">Inq: ' + data.inquilino + '</span>' : ''}
-                    </td>
-                    <td>${data.cochera}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        });
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>

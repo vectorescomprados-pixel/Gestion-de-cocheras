@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Carga - Unificado</title>
+    <title>SISTEMA COCHERAS - CARGA</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background-color: #f0f2f5; font-family: 'Inter', sans-serif; }
-        .card-shadow { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05); }
-        .btn-active:active { transform: scale(0.95); }
+        body { background-color: #0f172a; color: white; font-family: sans-serif; }
+        .input-dark { background-color: #1e293b; border: 1px solid #334155; color: white; }
+        .input-mirror { background-color: #0f172a; border: 1px solid #1e293b; color: #64748b; }
     </style>
 </head>
 <body>
@@ -25,96 +25,77 @@
             const [inquilino, setInquilino] = useState('');
             const [monto, setMonto] = useState('');
 
-            // Inicializa los iconos después del renderizado
             useEffect(() => {
-                if (window.lucide) {
-                    window.lucide.createIcons();
-                }
-            }, [inquilino]); // Se refrescan si cambia el estado para asegurar visibilidad
+                lucide.createIcons();
+            }, []);
 
-            // Función del Botón Home (Casita)
+            // FUNCIÓN DE LA CASITA: Ahora sí te redirige al Hub
             const irAlHub = () => {
-                // En un index.html puro, esto recarga la página o va a la raíz
-                window.location.href = 'index.html'; 
+                window.location.href = 'index.html'; // O la URL de tu menú principal
             };
 
             return (
-                <div className="max-w-md mx-auto min-h-screen flex flex-col p-6">
-                    
-                    {/* Header: Botón Casita corregido */}
-                    <header className="flex items-center justify-between mb-10">
+                <div className="max-w-2xl mx-auto p-6">
+                    {/* HEADER ORIGINAL */}
+                    <div className="flex items-center justify-between mb-8 border-b border-slate-700 pb-4">
                         <button 
                             onClick={irAlHub}
-                            className="btn-active p-3 bg-white rounded-2xl shadow-md border border-gray-100 text-blue-500 hover:text-blue-600 transition-all"
+                            className="p-2 hover:bg-slate-800 rounded-lg transition-colors border border-slate-600"
                         >
-                            <i data-lucide="home"></i>
+                            <i data-lucide="home" className="text-blue-400"></i>
                         </button>
-                        <h1 className="text-xl font-extrabold text-gray-800 tracking-tight">Carga de Datos</h1>
+                        <h1 className="text-xl font-bold tracking-widest uppercase">Sistema Cocheras - Carga</h1>
                         <div className="w-10"></div>
-                    </header>
+                    </div>
 
                     <div className="space-y-6">
-                        
-                        {/* Contenedor de Campos Sincronizados */}
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             
-                            {/* Campo 1: Inquilino (Entrada principal) */}
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-bold text-gray-400 uppercase ml-1">
-                                    Inquilino
-                                </label>
+                            {/* CAMPO 1: INQUILINO (Manual) */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-semibold text-slate-400 uppercase">Inquilino</label>
                                 <input 
                                     type="text" 
                                     value={inquilino}
                                     onChange={(e) => setInquilino(e.target.value)}
-                                    placeholder="Nombre..."
-                                    className="w-full p-4 bg-white rounded-2xl border-0 shadow-sm focus:ring-2 focus:ring-blue-400 outline-none text-gray-700 font-medium"
+                                    placeholder="Nombre del inquilino..."
+                                    className="input-dark p-4 rounded-lg outline-none focus:border-blue-500"
                                 />
                             </div>
 
-                            {/* Campo 2: Inquilino (Espejo - Antes era Cochera) */}
-                            <div className="space-y-2">
-                                <label className="text-[11px] font-bold text-gray-400 uppercase ml-1">
-                                    Inquilino
-                                </label>
+                            {/* CAMPO 2: INQUILINO (Espejo - Reemplaza a Cochera) */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-xs font-semibold text-slate-400 uppercase">Inquilino</label>
                                 <input 
                                     type="text" 
-                                    value={inquilino} // Sincronizado 100%
+                                    value={inquilino} // Sincronizado automáticamente
                                     readOnly 
-                                    placeholder="..."
-                                    className="w-full p-4 bg-gray-100 rounded-2xl border-0 text-gray-400 cursor-not-allowed outline-none italic shadow-inner"
+                                    placeholder="Sincronizado..."
+                                    className="input-mirror p-4 rounded-lg outline-none cursor-not-allowed italic"
                                 />
                             </div>
                         </div>
 
-                        {/* Campo de Monto */}
-                        <div className="space-y-2">
-                            <label className="text-[11px] font-bold text-gray-400 uppercase ml-1">
-                                Monto del Pago
-                            </label>
+                        {/* CAMPO MONTO */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-xs font-semibold text-slate-400 uppercase">Monto del Pago</label>
                             <div className="relative">
-                                <span className="absolute left-4 top-4 text-gray-500 font-bold">$</span>
+                                <span className="absolute left-4 top-4 text-slate-500">$</span>
                                 <input 
                                     type="number" 
                                     value={monto}
                                     onChange={(e) => setMonto(e.target.value)}
+                                    className="input-dark w-full p-4 pl-8 rounded-lg outline-none focus:border-blue-500 font-mono text-lg"
                                     placeholder="0.00"
-                                    className="w-full p-4 pl-8 bg-white rounded-2xl shadow-sm focus:ring-2 focus:ring-blue-400 outline-none text-gray-800 font-bold text-lg"
                                 />
                             </div>
                         </div>
 
-                        {/* Botón de Acción Principal */}
-                        <button 
-                            className="btn-active w-full bg-blue-500 text-white font-bold py-5 rounded-3xl shadow-lg shadow-blue-200 hover:bg-blue-600 transition-all uppercase tracking-widest text-xs mt-6"
-                        >
-                            Confirmar Carga
+                        {/* BOTÓN GUARDAR */}
+                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-lg shadow-lg transition-all active:scale-[0.98] uppercase tracking-widest mt-4">
+                            Guardar Registro
                         </button>
                     </div>
-
-                    <footer className="mt-auto py-8 text-center text-gray-300 text-[10px] font-medium uppercase tracking-[3px]">
-                        Sincronización de campos ok
-                    </footer>
                 </div>
             );
         };

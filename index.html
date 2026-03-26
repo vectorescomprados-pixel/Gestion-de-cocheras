@@ -4,9 +4,18 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SISTEMA COCHERAS - LISTADO</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body { background: #0b141a; color: white; font-family: sans-serif; padding: 15px; margin: 0; }
-        .header { position: sticky; top: 0; background: #0b141a; padding-bottom: 15px; z-index: 100; border-bottom: 1px solid #2a3942; }
+        
+        .header { 
+            position: sticky; 
+            top: 0; 
+            background: #0b141a; 
+            padding-bottom: 15px; 
+            z-index: 100; 
+            border-bottom: 1px solid #2a3942; 
+        }
         
         .search-box { 
             width: 100%; 
@@ -20,50 +29,67 @@
             outline: none;
             margin-top: 10px;
         }
-        .search-box:focus { border-color: #00a884; }
 
-        #lista { 
-            display: flex; 
-            flex-direction: column; 
-            gap: 25px; 
-            margin-top: 20px;
-        }
+        #lista { display: flex; flex-direction: column; gap: 20px; margin-top: 20px; }
 
+        /* Estilo de la Tarjeta igual a la imagen */
         .card { 
             background: #111b21; 
             padding: 20px; 
-            border-radius: 12px; 
-            border-left: 6px solid #00a884;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            border-radius: 15px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            border: 1px solid #202c33;
         }
 
-        /* Estilo para las etiquetas (Títulos de cada dato) */
-        .label { 
-            font-size: 0.85em; 
-            color: #8696a0; 
-            display: block;
-            margin-top: 15px;
-            margin-bottom: 3px;
-            text-transform: lowercase; /* Para que coincida con tu ejemplo 'uf', 'inquilino' */
-        }
-        .label:first-child { margin-top: 0; }
-
-        /* Estilo para los datos puros */
-        .data-text { 
-            color: #e9edef; 
-            font-size: 1.15em; 
-            font-weight: 500;
-            display: block;
-            min-height: 1.2em; /* Mantiene el espacio si el dato está vacío */
+        /* Cabecera de la tarjeta: UF y Iconos */
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
         }
 
-        /* Enlaces de teléfono limpios */
-        .tel-link {
-            color: #e9edef; /* Mismo color que el texto para que no distraiga */
+        .uf-info .uf-title { color: #3b82f6; font-weight: bold; font-size: 1.2em; margin: 0; }
+        .uf-info .prop-main { color: #e9edef; font-size: 1.1em; margin-top: 5px; display: block; }
+
+        .header-icons { display: flex; gap: 15px; color: #8696a0; font-size: 1.2em; }
+        .icon-view { color: #e9edef; }
+        .icon-edit { color: #2563eb; }
+        .icon-delete { color: #ef4444; }
+
+        /* Cuerpo de datos */
+        .divider { border-top: 1px dashed #202c33; margin: 15px 0; }
+
+        .data-group { margin-bottom: 12px; }
+        .blue-label { color: #3b82f6; font-weight: bold; font-size: 0.9em; display: block; margin-bottom: 4px; }
+        .value-text { color: #e9edef; font-size: 1.1em; display: block; }
+
+        /* Botones Inferiores */
+        .card-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px;
+            border-radius: 8px;
+            border: none;
+            font-weight: bold;
+            color: white;
             text-decoration: none;
-            font-size: 1.15em;
-            display: block;
+            text-transform: uppercase;
+            font-size: 0.9em;
+            cursor: pointer;
         }
+
+        .btn-call { background: #2563eb; }
+        .btn-chat { background: #16a34a; }
 
         .no-results { text-align: center; color: #8696a0; margin-top: 50px; }
     </style>
@@ -72,11 +98,11 @@
 
 <div class="header">
     <h2 style="margin: 10px 0; color: #e9edef;">Cocheras Edificio</h2>
-    <input type="text" id="buscador" class="search-box" placeholder="Buscar por UF, Propietario o Inquilino...">
+    <input type="text" id="buscador" class="search-box" placeholder="UF, Propietario o Inquilino...">
 </div>
 
 <div id="lista">
-    <p style="text-align:center; color:#8696a0;">Conectando...</p>
+    <p style="text-align:center; color:#8696a0;">Cargando datos...</p>
 </div>
 
 <script type="module">
@@ -116,22 +142,49 @@
             const card = document.createElement('div');
             card.className = 'card';
             
-            // Renderizado siguiendo exactamente tu estructura
             card.innerHTML = `
-                <span class="label">uf</span>
-                <span class="data-text">${i.uf || ''}</span>
-                
-                <span class="label">Propietario</span>
-                <span class="data-text">${i.prop || ''}</span>
+                <div class="card-header">
+                    <div class="uf-info">
+                        <h3 class="uf-title">UF: ${i.uf || '----'}</h3>
+                        <span class="prop-main">${i.prop || '---'}</span>
+                    </div>
+                    <div class="header-icons">
+                        <i class="fa-regular fa-eye icon-view"></i>
+                        <i class="fa-solid fa-pen-to-square icon-edit"></i>
+                        <i class="fa-solid fa-trash icon-delete"></i>
+                    </div>
+                </div>
 
-                <span class="label">telefono Propietario</span>
-                <a href="tel:${i.tel_prop}" class="tel-link">${i.tel_prop || ''}</a>
+                <div class="divider"></div>
 
-                <span class="label">inquilino</span>
-                <span class="data-text">${i.inquilino || ''}</span>
+                <div class="data-group">
+                    <span class="blue-label">Prop:</span>
+                    <span class="value-text">${i.prop || '---'} |</span>
+                </div>
 
-                <span class="label">telefono inquilino</span>
-                <a href="tel:${i.tel_inq}" class="tel-link">${i.tel_inq || ''}</a>
+                <div class="data-group">
+                    <span class="blue-label">Tel:</span>
+                    <span class="value-text">${i.tel_prop || 'N/C'}</span>
+                </div>
+
+                <div class="data-group">
+                    <span class="blue-label">Inq:</span>
+                    <span class="value-text">${i.inquilino || 'Sin Inquilino'} |</span>
+                </div>
+
+                <div class="data-group">
+                    <span class="blue-label">Tel:</span>
+                    <span class="value-text">${i.tel_inq || 'N/C'}</span>
+                </div>
+
+                <div class="card-actions">
+                    <a href="tel:${i.tel_inq || i.tel_prop}" class="btn btn-call">
+                        <i class="fa-solid fa-phone"></i> LLAMAR
+                    </a>
+                    <a href="https://wa.me/${String(i.tel_inq || i.tel_prop).replace(/[^0-9]/g, '')}" target="_blank" class="btn btn-chat">
+                        <i class="fa-brands fa-whatsapp"></i> CHAT
+                    </a>
+                </div>
             `;
             contenedor.appendChild(card);
         });

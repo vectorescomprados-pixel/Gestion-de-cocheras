@@ -1,145 +1,117 @@
 ﻿<!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - CARGA FINAL</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Carga - Inquilinos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 80px; }
-        
-        /* BOTÓN CASITA (HOME) */
-        .btn-home { 
-            position: fixed; top: 15px; left: 15px; background: #202c33; color: #00a884; 
-            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; text-decoration: none; font-size: 24px; border: 1px solid #2a3942;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000;
-        }
-
-        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; }
-        .row { display: flex; gap: 12px; margin: 15px 0; }
-        button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; }
-        .danger { background: #ff3b30; color: white; }
-        .primary { background: #00a884; color: white; }
-        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; width: 100%; }
-        th, td { border: 1px solid #2a3942; padding: 10px; text-align: left; font-size: 14px; }
-        th { background: #202c33; color: #00a884; }
-        .inq-sub { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
+        body { background-color: #f3f4f6; font-family: sans-serif; }
     </style>
 </head>
 <body>
+    <div id="root"></div>
 
-    <a href="index.html" class="btn-home">🏠</a>
+    <script type="text/babel">
+        const { useState, useEffect } = React;
 
-    <h3>Carga Masiva (87 UF)</h3>
-    <div id="status">Estado: Esperando datos...</div>
+        const App = () => {
+            const [inquilino, setInquilino] = useState('');
+            const [monto, setMonto] = useState('');
 
-    <textarea id="csv-input" placeholder="Pega aquí las 87 líneas del CSV..."></textarea>
+            // Función para volver al HUB (Simulado)
+            const irAlHub = () => {
+                // Aquí podrías usar window.location.href = '/' si fuera una web real
+                alert("Redirigiendo al Hub Central...");
+            };
 
-    <div class="row">
-        <button class="primary" onclick="window.cargar()">Subir Datos</button>
-        <button class="danger" onclick="window.limpiar()">Limpiar Todo</button>
-    </div>
-
-    <table>
-        <thead>
-            <tr>
-                <th>UF</th>
-                <th>Habitante (Prop / Inq)</th>
-                <th>Cochera</th>
-            </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-    </table>
-
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, writeBatch, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-
-        const firebaseConfig = {
-            apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo",
-            authDomain: "gestionuf-remoto.firebaseapp.com",
-            projectId: "gestionuf-remoto",
-            storageBucket: "gestionuf-remoto.firebasestorage.app",
-            messagingSenderId: "724452752860",
-            appId: "1:724452752860:web:4d25585addcdcbd146e319"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const colRef = collection(db, "cocheras_edificio");
-
-        window.cargar = async () => {
-            const area = document.getElementById("csv-input");
-            const texto = area.value.trim();
-            if(!texto) return alert("Pega los datos");
-
-            const status = document.getElementById("status");
-            status.innerText = "⌛ Procesando de forma segura...";
-
-            const lineas = texto.split("\n");
-            const batch = writeBatch(db);
-            let contador = 0;
-
-            lineas.forEach(linea => {
-                const columnas = linea.split(",");
-                // Buscar número de UF
-                let encontroUF = linea.match(/\d+/);
-                
-                if (encontroUF) {
-                    let ufNum = String(encontroUF);
-                    let ufID = ufNum.padStart(4, '0');
+            return (
+                <div className="max-w-md mx-auto min-h-screen flex flex-col p-4">
                     
-                    // Manejo seguro de columnas para evitar error de "trim"
-                    let prop = columnas ? String(columnas).trim() : "S/D";
-                    let inq = columnas ? String(columnas).trim() : "";
+                    {/* Header con el botón de la casita igual a tus otras apps */}
+                    <header className="flex items-center justify-between mb-8 pt-4">
+                        <button 
+                            onClick={irAlHub}
+                            className="p-3 bg-white rounded-2xl shadow-sm hover:bg-gray-50 active:scale-90 transition-all text-blue-500"
+                        >
+                            <i data-lucide="home"></i>
+                        </button>
+                        <h1 className="text-xl font-bold text-gray-800">Carga de Datos</h1>
+                        <div className="w-12"></div> {/* Balanceador visual */}
+                    </header>
 
-                    const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                    batch.set(docRef, {
-                        uf: ufID,
-                        prop: prop,
-                        inquilino: inq,
-                        cochera: ufNum,
-                        patente: ""
-                    }, { merge: true });
-                    contador++;
-                }
-            });
+                    <div className="space-y-6">
+                        {/* Fila de campos duplicados/sincronizados */}
+                        <div className="grid grid-cols-2 gap-4">
+                            
+                            {/* Campo 1: Inquilino (Entrada) */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold text-gray-500 ml-1 uppercase flex items-center gap-2">
+                                    <i data-lucide="user" size="14"></i> Inquilino
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={inquilino}
+                                    onChange={(e) => setInquilino(e.target.value)}
+                                    placeholder="Nombre..."
+                                    className="w-full p-4 bg-white rounded-2xl shadow-sm border-0 focus:ring-2 focus:ring-blue-400 outline-none"
+                                />
+                            </div>
 
-            try {
-                await batch.commit();
-                status.innerText = "✅ ¡Éxito! Se cargaron " + contador + " unidades.";
-                area.value = "";
-            } catch (e) {
-                status.innerText = "❌ Error en la subida: " + e.message;
-            }
+                            {/* Campo 2: Inquilino (Espejo - Antes llamado Cochera) */}
+                            <div className="flex flex-col gap-2">
+                                <label className="text-sm font-bold text-gray-500 ml-1 uppercase flex items-center gap-2">
+                                    <i data-lucide="user-check" size="14"></i> Inquilino
+                                </label>
+                                <input 
+                                    type="text" 
+                                    value={inquilino} // Sincronizado
+                                    readOnly // No se puede editar aquí
+                                    className="w-full p-4 bg-gray-50 text-gray-400 rounded-2xl shadow-inner border-0 outline-none cursor-not-allowed"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Campo Monto */}
+                        <div className="flex flex-col gap-2">
+                            <label className="text-sm font-bold text-gray-500 ml-1 uppercase flex items-center gap-2">
+                                <i data-lucide="dollar-sign" size="14"></i> Monto del pago
+                            </label>
+                            <input 
+                                type="number" 
+                                value={monto}
+                                onChange={(e) => setMonto(e.target.value)}
+                                placeholder="0.00"
+                                className="w-full p-4 bg-white rounded-2xl shadow-sm border-0 focus:ring-2 focus:ring-blue-400 outline-none"
+                            />
+                        </div>
+
+                        {/* Botón de Guardar */}
+                        <button className="w-full bg-blue-500 text-white font-bold py-4 rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-600 active:scale-95 transition-all mt-4">
+                            GUARDAR CARGA
+                        </button>
+                    </div>
+
+                    {/* Footer decorativo */}
+                    <footer className="mt-auto py-6 text-center text-gray-400 text-xs">
+                        Sistema v2.0 - Sincronización activa
+                    </footer>
+                </div>
+            );
         };
 
-        window.limpiar = async () => {
-            if(!confirm("¿Borrar toda la base de datos?")) return;
-            const snap = await getDocs(colRef);
-            const batch = writeBatch(db);
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-        };
+        // Renderizar la App e inicializar iconos
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
 
-        onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-            const tbody = document.getElementById("tbody");
-            tbody.innerHTML = "";
-            snap.forEach(d => {
-                const data = d.data();
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td><b>${data.uf}</b></td>
-                    <td>
-                        <b>${data.prop || 'S/D'}</b>
-                        ${data.inquilino ? '<span class="inq-sub">Inq: ' + data.inquilino + '</span>' : ''}
-                    </td>
-                    <td>${data.cochera}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        });
+        // Pequeño delay para que Lucide encuentre los elementos después de que React renderice
+        setTimeout(() => {
+            lucide.createIcons();
+        }, 100);
     </script>
 </body>
 </html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>SISTEMA COCHERAS - FIXED V5</title>
+    <title>SISTEMA COCHERAS - V6 FINAL</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
@@ -13,6 +13,7 @@
             --text: #e9edef; 
             --border: #222d34; 
             --success: #16a34a;
+            --orange: #f97316;
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
@@ -27,11 +28,7 @@
             padding: 0 10px;
         }
 
-        .main-container {
-            width: 100%;
-            max-width: 500px;
-            position: relative;
-        }
+        .main-container { width: 100%; max-width: 500px; position: relative; }
 
         .header { 
             position: sticky; 
@@ -42,12 +39,25 @@
             border-bottom: 1px solid var(--border);
         }
 
-        .search-group { display: flex; gap: 8px; margin-top: 10px; }
+        /* Grupo de Búsqueda Adaptado */
+        .search-group { display: flex; gap: 6px; margin-top: 10px; }
         .search-box { flex: 1; padding: 12px; background: #202c33; border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 16px; outline: none; }
         
-        .btn-search-icon { background: var(--primary); border: none; border-radius: 10px; width: 50px; color: white; cursor: pointer; }
+        .btn-header { 
+            background: var(--primary); border: none; border-radius: 10px; 
+            width: 48px; color: white; cursor: pointer; font-size: 16px;
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.2s;
+        }
+        .btn-reset { background: #374151; } /* Color gris oscuro para diferenciar */
 
         #lista { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; padding-bottom: 120px; }
+
+        /* Mensaje de No Resultados */
+        .no-results {
+            text-align: center; margin-top: 40px; padding: 20px;
+            background: #1f2937; border-radius: 15px; border: 1px dashed #4b5563;
+        }
 
         .card { background: var(--card); padding: 18px; border-radius: 15px; border: 1px solid var(--border); border-left: 6px solid var(--primary); }
         .card-header { display: flex; justify-content: space-between; align-items: center; }
@@ -67,45 +77,20 @@
             color: white; font-size: 22px; box-shadow: 0 5px 15px rgba(0,0,0,0.5);
             cursor: pointer; z-index: 1000; border: 2px solid white; text-decoration: none;
         }
-        .btn-rocket { bottom: 85px; right: 20px; background: #f97316; display: none; }
-        .btn-home { bottom: 20px; right: 20px; background: #2563eb; }
+        .btn-rocket { bottom: 85px; right: 20px; background: var(--orange); display: none; }
+        .btn-home { bottom: 20px; right: 20px; background: var(--primary); }
 
-        /* MODAL CORREGIDO */
+        /* MODAL */
         .modal { 
-            position: fixed; 
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9); 
-            z-index: 9999; 
-            display: none; /* Asegura que inicie oculto */
-            align-items: center; 
-            justify-content: center; 
-            padding: 20px; 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); z-index: 9999; display: none;
+            align-items: center; justify-content: center; padding: 20px; 
         }
-        
-        /* Cuando tiene la clase .active se muestra */
         .modal.active { display: flex; }
+        .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: 1px solid var(--border); }
+        .modal input { width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; }
 
-        .modal-content { 
-            background: var(--card); 
-            padding: 25px; 
-            border-radius: 20px; 
-            width: 100%; 
-            max-width: 400px; 
-            border: 1px solid var(--border);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-        }
-
-        .modal h3 { margin-bottom: 20px; text-align: center; color: var(--primary); }
-        .modal input { 
-            width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; 
-            border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; font-size: 16px;
-        }
-
-        .btn-ui { 
-            display: flex; align-items: center; justify-content: center; gap: 8px; 
-            padding: 14px; border-radius: 10px; border: none; font-weight: bold; 
-            color: white; text-transform: uppercase; font-size: 0.85em; cursor: pointer; text-decoration: none; 
-        }
+        .btn-ui { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 10px; border: none; font-weight: bold; color: white; text-transform: uppercase; font-size: 0.85em; cursor: pointer; text-decoration: none; }
     </style>
 </head>
 <body>
@@ -115,15 +100,16 @@
         <h2 style="text-align: center; font-size: 1.4em;">Cocheras Edificio</h2>
         <div class="search-group">
             <input type="text" id="buscador" class="search-box" placeholder="UF o Apellido...">
-            <button id="btn-ejecutar-busqueda" class="btn-search-icon">
+            <button id="btn-search" class="btn-header" title="Buscar">
                 <i class="fas fa-search"></i>
+            </button>
+            <button id="btn-refresh" class="btn-header btn-reset" title="Actualizar todo">
+                <i class="fas fa-sync-alt"></i>
             </button>
         </div>
     </div>
 
-    <div id="lista">
-        <p style="text-align:center; margin-top:20px; color:#8696a0;">Cargando cocheras (0-87)...</p>
-    </div>
+    <div id="lista"></div>
 </div>
 
 <div id="go-top" class="float-btn btn-rocket" onclick="window.scrollTo({top:0, behavior:'smooth'})">
@@ -143,7 +129,7 @@
         <input id="f-teli" type="text" placeholder="Tel. Inquilino">
         <div style="display: flex; gap: 10px; margin-top: 10px;">
             <button id="btn-save" class="btn-ui" style="flex:1; background:var(--primary)">GUARDAR</button>
-            <button id="btn-cancel" class="btn-ui" style="flex:1; background:#475569">CERRAR</button>
+            <button id="btn-cancel" class="btn-ui" style="flex:1; background:#475569">VOLVER</button>
         </div>
     </div>
 </div>
@@ -165,7 +151,6 @@
     let departamentos = [];
     let editId = null;
 
-    // Sincronización Blindada
     onSnapshot(query(colRef, orderBy("UF", "asc")), (snap) => {
         departamentos = snap.docs
             .map(d => ({ id: d.id, ...d.data() }))
@@ -179,6 +164,17 @@
     function render(data) {
         const list = document.getElementById("lista");
         list.innerHTML = "";
+
+        if(data.length === 0) {
+            list.innerHTML = `
+                <div class="no-results">
+                    <i class="fas fa-search" style="font-size:2em; color:var(--orange); margin-bottom:10px;"></i>
+                    <p style="font-weight:bold;">Registro no encontrado</p>
+                    <p style="font-size:0.9em; color:#8696a0; margin-top:5px;">Prueba con otra UF o Apellido</p>
+                </div>`;
+            return;
+        }
+
         data.forEach(d => {
             const card = document.createElement("div");
             card.className = "card";
@@ -209,7 +205,26 @@
         });
     }
 
-    // Navegación y Funciones
+    // LÓGICA DE BÚSQUEDA Y ACTUALIZACIÓN
+    const ejecutarBusqueda = () => {
+        const v = document.getElementById('buscador').value.trim().toLowerCase();
+        if(v === "") { render(departamentos); return; }
+        const res = departamentos.filter(d => 
+            String(d.UF).toLowerCase().includes(v) || (d.Propietario||"").toLowerCase().includes(v)
+        );
+        render(res);
+    };
+
+    // Botón Actualizar/Refresh
+    document.getElementById('btn-refresh').onclick = () => {
+        document.getElementById('buscador').value = ""; // Limpia texto
+        render(departamentos); // Muestra todo de nuevo
+    };
+
+    document.getElementById('btn-search').onclick = ejecutarBusqueda;
+    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") ejecutarBusqueda(); };
+
+    // --- FUNCIONES GLOBAL ---
     window.toggleExpand = (id) => document.getElementById(`card-${id}`).classList.toggle('expanded');
     
     window.editUF = (id) => {
@@ -224,12 +239,8 @@
         document.getElementById("modal-form").classList.add("active");
     };
 
-    // Cerrar Modal
-    document.getElementById("btn-cancel").onclick = () => {
-        document.getElementById("modal-form").classList.remove("active");
-    };
-
-    // Guardar
+    document.getElementById("btn-cancel").onclick = () => document.getElementById("modal-form").classList.remove("active");
+    
     document.getElementById("btn-save").onclick = async () => {
         const d = {
             UF: document.getElementById("f-uf").value,
@@ -238,22 +249,9 @@
             Inquilino: document.getElementById("f-inq").value,
             TelefonoInquilino: document.getElementById("f-teli").value
         };
-        try {
-            await updateDoc(doc(db, "departamentos", editId), d);
-            document.getElementById("modal-form").classList.remove("active");
-        } catch(e) { alert("Error al guardar"); }
+        await updateDoc(doc(db, "departamentos", editId), d);
+        document.getElementById("modal-form").classList.remove("active");
     };
-
-    // Buscador
-    const ejecutarBusqueda = () => {
-        const v = document.getElementById('buscador').value.toLowerCase();
-        const res = departamentos.filter(d => 
-            String(d.UF).toLowerCase().includes(v) || (d.Propietario||"").toLowerCase().includes(v)
-        );
-        render(res);
-    };
-    document.getElementById('btn-ejecutar-busqueda').onclick = ejecutarBusqueda;
-    document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") ejecutarBusqueda(); };
 
     window.onscroll = () => {
         const btn = document.getElementById("go-top");

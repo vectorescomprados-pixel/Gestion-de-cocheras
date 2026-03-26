@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=0, viewport-fit=cover">
-    <title>SISTEMA COCHERAS - V8 CLEAN</title>
+    <title>SISTEMA COCHERAS - V9 AUTO</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root { 
@@ -25,13 +25,14 @@
         .search-group { display: flex; gap: 6px; margin-top: 10px; }
         .search-box { flex: 1; padding: 12px; background: #202c33; border: 1px solid var(--border); border-radius: 10px; color: white; font-size: 16px; outline: none; }
         
-        .btn-header { background: var(--primary); border: none; border-radius: 10px; width: 45px; height: 45px; color: white; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+        .btn-header { background: var(--primary); border: none; border-radius: 10px; width: 45px; height: 45px; color: white; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
+        .btn-header:active { transform: scale(0.95); opacity: 0.8; }
         .btn-reset { background: #374151; }
-        .btn-filter-empty { background: #854d0e; } /* Color ocre para identificar vacantes */
+        .btn-filter-empty { background: #854d0e; } /* Color para las vacantes */
 
         #lista { display: flex; flex-direction: column; gap: 15px; margin-top: 20px; padding-bottom: 120px; }
 
-        .card { background: var(--card); padding: 18px; border-radius: 15px; border: 1px solid var(--border); border-left: 6px solid var(--primary); transition: 0.2s; }
+        .card { background: var(--card); padding: 18px; border-radius: 15px; border: 1px solid var(--border); border-left: 6px solid var(--primary); }
         .card.is-empty { border-left: 6px solid var(--warning-empty) !important; }
 
         .card-header { display: flex; justify-content: space-between; align-items: center; }
@@ -53,7 +54,7 @@
         .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 9999; display: none; align-items: center; justify-content: center; padding: 20px; }
         .modal.active { display: flex; }
         .modal-content { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: 1px solid var(--border); }
-        .modal input { width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; }
+        .modal input { width: 100%; height: 48px; margin-bottom: 12px; border-radius: 10px; border: 1px solid var(--border); padding: 0 15px; background: #0b141a; color: white; font-size: 16px; }
         .btn-ui { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; border-radius: 10px; border: none; font-weight: bold; color: white; text-transform: uppercase; font-size: 0.85em; cursor: pointer; text-decoration: none; }
     </style>
 </head>
@@ -65,7 +66,7 @@
         <div class="search-group">
             <input type="text" id="buscador" class="search-box" placeholder="UF o Apellido...">
             <button id="btn-search" class="btn-header" title="Buscar"><i class="fas fa-search"></i></button>
-            <button id="btn-filter-empty" class="btn-header btn-filter-empty" title="Ver Vacías"><i class="far fa-square"></i></button>
+            <button id="btn-filter-empty" class="btn-header btn-filter-empty" title="Ver Libres"><i class="fas fa-car"></i></button>
             <button id="btn-refresh" class="btn-header btn-reset" title="Restablecer"><i class="fas fa-sync-alt"></i></button>
         </div>
     </div>
@@ -107,7 +108,7 @@
             .filter(d => { const n = parseInt(d.UF); return n >= 0 && n <= 87; });
         
         const vacias = departamentos.filter(d => !d.Inquilino || d.Inquilino.trim() === "").length;
-        console.log(`[HUB] Vacantes: ${vacias}`);
+        console.log(`[HUB] Vacantes Actuales: ${vacias}`);
         render(departamentos);
     });
 
@@ -116,7 +117,7 @@
         list.innerHTML = "";
 
         if(data.length === 0) {
-            list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#8696a0;">Sin resultados</div>`;
+            list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#8696a0;">No hay resultados</div>`;
             return;
         }
 
@@ -130,7 +131,7 @@
                 <div class="card-header">
                     <div>
                         <div class="uf-title">UF: ${d.UF || '---'}</div>
-                        <div style="margin-top:4px;">${d.Propietario || 'S/D'}</div>
+                        <div style="margin-top:4px; font-weight:500;">${d.Propietario || 'S/D'}</div>
                     </div>
                     <div class="header-icons">
                         <i class="fas fa-eye" style="color:#8696a0" onclick="window.toggleExpand('${d.id}')"></i>
@@ -140,7 +141,7 @@
                 <div class="card-body">
                     <div class="data-line"><span class="label-blue">Prop:</span> ${d.Propietario || '-'}</div>
                     <div class="data-line"><span class="label-blue">Tel:</span> ${d.TelefonoPropietario || 'N/C'}</div>
-                    <div class="data-line"><span class="label-blue">Inq:</span> ${esVacia ? '<span style="color:var(--warning-empty)">LIBRE</span>' : d.Inquilino}</div>
+                    <div class="data-line"><span class="label-blue">Inq:</span> ${esVacia ? '<span style="color:var(--warning-empty); font-weight:bold;">ESPACIO LIBRE</span>' : d.Inquilino}</div>
                     <div class="data-line"><span class="label-blue">Tel:</span> ${d.TelefonoInquilino || 'N/C'}</div>
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:15px;">
                         <a href="tel:${d.TelefonoInquilino || d.TelefonoPropietario}" class="btn-ui" style="background:var(--primary)"><i class="fas fa-phone"></i></a>
@@ -152,7 +153,7 @@
         });
     }
 
-    // Filtros
+    // Filtros de Header
     document.getElementById('btn-filter-empty').onclick = () => {
         const vacias = departamentos.filter(d => !d.Inquilino || d.Inquilino.trim() === "");
         render(vacias);
@@ -171,7 +172,7 @@
     document.getElementById('btn-search').onclick = buscar;
     document.getElementById('buscador').onkeyup = (e) => { if(e.key === "Enter") buscar(); };
 
-    // Globales
+    // Acciones y Navegación
     window.toggleExpand = (id) => document.getElementById(`card-${id}`).classList.toggle('expanded');
     window.editUF = (id) => {
         const d = departamentos.find(x => x.id === id);
@@ -187,7 +188,13 @@
 
     document.getElementById("btn-cancel").onclick = () => document.getElementById("modal-form").classList.remove("active");
     document.getElementById("btn-save").onclick = async () => {
-        const upd = { UF: document.getElementById("f-uf").value, Propietario: document.getElementById("f-prop").value, TelefonoPropietario: document.getElementById("f-telp").value, Inquilino: document.getElementById("f-inq").value, TelefonoInquilino: document.getElementById("f-teli").value };
+        const upd = { 
+            UF: document.getElementById("f-uf").value, 
+            Propietario: document.getElementById("f-prop").value, 
+            TelefonoPropietario: document.getElementById("f-telp").value, 
+            Inquilino: document.getElementById("f-inq").value, 
+            TelefonoInquilino: document.getElementById("f-teli").value 
+        };
         await updateDoc(doc(db, "departamentos", editId), upd);
         document.getElementById("modal-form").classList.remove("active");
     };

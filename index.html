@@ -1,154 +1,122 @@
-﻿<!DOCTYPE html>
+﻿<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>SISTEMA COCHERAS - CARGA FINAL</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=0,viewport-fit=cover">
+    <title>GestiónUF Pro - Enterprise Gold V3</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        body { background: #0b141a; color: white; font-family: sans-serif; margin: 0; padding: 20px; padding-top: 80px; }
-        
-        /* BOTÓN CASITA (HOME) - ESTILO FLOTANTE */
-        .btn-home { 
-            position: fixed; top: 15px; left: 15px; background: #202c33; color: #00a884; 
-            width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; 
-            justify-content: center; text-decoration: none; font-size: 24px; border: 1px solid #2a3942;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000; transition: 0.3s;
-        }
-        .btn-home:hover { background: #2a3942; transform: scale(1.1); }
+        :root { --bg: #0b141a; --card: #111b21; --primary: #2563eb; --danger: #e11d48; --text: #e9edef; --border: #222d34; --warning: #f59e0b; --success: #22c55e; }
+        body.light-mode { --bg: #f0f2f5; --card: #ffffff; --text: #1f293b; --border: #e5e7eb; }
 
-        textarea { width: 100%; min-height: 120px; background: #111b21; color: #00a884; border: 1px solid #2a3942; padding: 10px; border-radius: 8px; box-sizing: border-box; outline: none; }
-        .row { display: flex; gap: 12px; margin: 15px 0; }
-        button { padding: 12px 20px; cursor: pointer; border-radius: 8px; border: none; font-weight: bold; flex: 1; text-transform: uppercase; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        .danger { background: #ff3b30; color: white; }
-        .primary { background: #00a884; color: white; }
-        #status { color: #e1ff00; font-weight: bold; margin-bottom: 10px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 5px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111b21; }
-        th, td { border: 1px solid #2a3942; padding: 12px; text-align: left; font-size: 14px; }
-        th { background: #202c33; color: #00a884; text-transform: uppercase; font-size: 12px; }
-        .inq-sub { color: #8696a0; font-size: 0.85em; display: block; margin-top: 4px; }
-        b { color: #e9edef; }
+        * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--text); display: flex; justify-content: center; min-height: 100vh; overflow-x: hidden; }
+        .wrap { width: 95%; max-width: 450px; position: relative; }
+        .hidden { display: none !important; }
+
+        /* BOTÓN HOME (ARREGLADO: por encima del login modal) */
+        .btn-home-fixed{
+            position: fixed !important;
+            bottom: 30px !important;
+            right: 25px !important;
+
+            z-index: 20001;            /* <-- clave: mayor que el modal (10000) */
+            pointer-events: auto;
+
+            background: var(--primary) !important;
+            color: white !important;
+
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+
+            text-decoration: none;
+            box-shadow: 0 10px 28px rgba(0,0,0,0.55);
+            border: 3px solid rgba(255,255,255,0.9);
+
+            transition: transform .12s ease, filter .12s ease;
+        }
+        .btn-home-fixed:hover { transform: translateY(-2px); filter: brightness(1.05); }
+
+        /* HEADER */
+        .main-header { position: fixed; top: 0; width: 95%; max-width: 450px; background: var(--card); z-index: 1000; padding: 15px; border-bottom: 4px solid var(--primary); border-radius: 0 0 20px 20px; }
+        .content-body { margin-top: 380px; width: 100%; padding-bottom: 120px; }
+
+        .grid-btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 10px; }
+        .btn { height: 48px; border-radius: 12px; border: none; font-weight: bold; font-size: 11px; cursor: pointer; color: white; display: flex; align-items: center; justify-content: center; text-transform: uppercase; gap: 5px; }
+        .primary { background: #2563eb; } .danger { background: #e11d48; } .orange { background: #f97316; } .warning { background: #f59e0b; color: #000; } .ghost { background: #475569; }
+
+        /* LOG PANEL */
+        #log-container { background: #000; padding: 10px; border-radius: 10px; margin-bottom: 15px; font-family: monospace; font-size: 10px; height: 100px; overflow-y: auto; border: 1px solid #333; }
+        .log-success { color: #00ff41; }
+        .log-info { color: #00d4ff; }
+        .log-err { color: #ff3131; }
+        .log-warn { color: #f59e0b; } /* <-- agregado, lo estabas usando */
+
+        /* CARDS */
+        .item { background: var(--card); border-radius: 15px; padding: 18px; margin-bottom: 15px; border: 1px solid var(--border); position: relative; border-left: 10px solid var(--success); }
+        .item.no-phone { border-left: 10px solid var(--warning) !important; }
+        .item b { font-size: 18px; color: #3b82f6; display: block; }
+        .item small { font-size: 14px; color: var(--text); opacity: 0.7; }
+        .details { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #4b5563; font-size: 13px; line-height: 1.6; }
+
+        input { width: 100%; height: 50px; margin-bottom: 12px; border-radius: 12px; border: 1px solid var(--border); padding: 0 15px; background: var(--bg); color: var(--text); font-size: 16px; outline: none; }
+
+        /* MODALES */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .modal-content { background: var(--card); padding: 30px; border-radius: 25px; width: 92%; max-width: 400px; border: 1px solid var(--border); text-align: center; }
     </style>
 </head>
 <body>
 
-    <a href="index.html" class="btn-home" title="Volver al HUB">🏠</a>
+    <input type="file" id="csv-file" class="hidden" accept=".csv">
 
-    <h3>Carga Masiva de Unidades</h3>
-    <div id="status">Estado: Listo para recibir tus 87 líneas</div>
+    <!-- HUB central (tu URL actual). Ahora sí queda clickeable incluso con el login abierto -->
+    <a href="https://vectorescomprados-pixel.github.io/Gestion-de-Consorcios/" class="btn-home-fixed" aria-label="Volver al HUB">
+        <i class="fas fa-home" style="font-size: 28px;"></i>
+    </a>
 
-    <textarea id="csv-input" placeholder="Pegue aquí el contenido del CSV..."></textarea>
-
-    <div class="row">
-        <button class="primary" onclick="window.cargar()">Subir Datos</button>
-        <button class="danger" onclick="window.limpiar()">Limpiar Nube</button>
+    <div id="login-screen" class="modal">
+        <div class="modal-content">
+            <h2 style="margin-bottom:20px; color:#2563eb">GestiónUF Acceso</h2>
+            <input id="login-pass" type="password" placeholder="Contraseña">
+            <button id="btn-login" class="btn primary" style="width:100%">ENTRAR</button>
+        </div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>UF</th>
-                <th>Propietario / Inquilino</th>
-                <th>Cochera</th>
-            </tr>
-        </thead>
-        <tbody id="tbody"></tbody>
-    </table>
+    <div id="modal-confirm" class="modal hidden">
+        <div class="modal-content">
+            <h3>Seguridad Requerida</h3>
+            <p id="confirm-msg" style="margin:10px 0; font-size:13px; opacity:0.8"></p>
+            <input id="confirm-pass" type="password" placeholder="Clave Administrativa">
+            <div style="display:flex; gap:10px">
+                <button id="btn-confirm-yes" class="btn primary" style="flex:1">AUTORIZAR</button>
+                <button id="btn-confirm-no" class="btn danger" style="flex:1">VOLVER</button>
+            </div>
+        </div>
+    </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, doc, writeBatch, getDocs, deleteDoc, onSnapshot, query, orderBy } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    <div id="main-screen" class="wrap hidden">
+        <div class="main-header">
+            <div style="font-size:10px; text-align:center; margin-bottom:12px; color:var(--success);">● EN LÍNEA - SEGURIDAD ACTIVA</div>
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyDxw26xM3pliNxo79LdvWkr0uOGdvCgiIo",
-            authDomain: "gestionuf-remoto.firebaseapp.com",
-            projectId: "gestionuf-remoto",
-            storageBucket: "gestionuf-remoto.firebasestorage.app",
-            messagingSenderId: "724452752860",
-            appId: "1:724452752860:web:4d25585addcdcbd146e319"
-        };
+            <div class="grid-btns">
+                <button id="btn-log-toggle" class="btn primary">LOGS</button>
+                <button id="btn-theme" class="btn primary">TEMA</button>
+                <button id="btn-logout" class="btn danger">CERRAR</button>
+            </div>
 
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const colRef = collection(db, "cocheras_edificio");
+            <div class="grid-btns">
+                <button id="btn-add" class="btn primary">NUEVA UF</button>
+                <button id="btn-import-trigger" class="btn primary">IMPORTAR</button>
+                <button id="btn-export" class="btn primary">RESPALDO</button>
+            </div>
 
-        window.cargar = async () => {
-            const area = document.getElementById("csv-input");
-            const texto = area.value.trim();
-            if(!texto) return alert("Pega los datos antes de subir.");
+            <input id="search-input" placeholder="Buscar por Unidad, Apellido o Inquilino...">
 
-            const status = document.getElementById("status");
-            status.innerText = "⌛ Procesando 87 líneas de forma segura...";
-
-            const lineas = texto.split("\n");
-            const batch = writeBatch(db);
-            let contador = 0;
-
-            lineas.forEach(linea => {
-                if(!linea.trim()) return; // Ignora líneas vacías
-                
-                const columnas = linea.split(",");
-                let encontroUF = linea.match(/\d+/);
-                
-                if (encontroUF) {
-                    let ufNum = String(encontroUF);
-                    let ufID = ufNum.padStart(4, '0');
-                    
-                    // SEGURIDAD TOTAL: Convertimos a String antes de limpiar espacios
-                    let prop = columnas ? String(columnas).trim() : "S/D";
-                    let inq = columnas ? String(columnas).trim() : "";
-
-                    const docRef = doc(db, "cocheras_edificio", "UF-" + ufID);
-                    batch.set(docRef, {
-                        uf: ufID,
-                        prop: prop,
-                        inquilino: inq,
-                        cochera: ufNum,
-                        patente: ""
-                    }, { merge: true });
-                    contador++;
-                }
-            });
-
-            try {
-                await batch.commit();
-                status.style.color = "#00a884";
-                status.innerText = "✅ ¡Éxito! Se cargaron " + contador + " unidades.";
-                area.value = "";
-            } catch (e) {
-                status.style.color = "#ff3b30";
-                status.innerText = "❌ Error en Firebase: " + e.message;
-            }
-        };
-
-        window.limpiar = async () => {
-            if(!confirm("¿Borrar todos los datos de la nube?")) return;
-            const status = document.getElementById("status");
-            status.innerText = "🗑️ Limpiando base de datos...";
-            const snap = await getDocs(colRef);
-            const batch = writeBatch(db);
-            snap.forEach(d => batch.delete(d.ref));
-            await batch.commit();
-            status.innerText = "✅ Base vaciada.";
-        };
-
-        onSnapshot(query(colRef, orderBy("uf")), (snap) => {
-            const tbody = document.getElementById("tbody");
-            tbody.innerHTML = "";
-            snap.forEach(d => {
-                const data = d.data();
-                const tr = document.createElement("tr");
-                tr.innerHTML = `
-                    <td style="color:#00a884;"><b>${data.uf}</b></td>
-                    <td>
-                        <b>${data.prop}</b>
-                        ${data.inquilino ? '<span class="inq-sub">Inq: ' + data.inquilino + '</span>' : ''}
-                    </td>
-                    <td>${data.cochera}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        });
-    </script>
-</body>
-</html>
+            <div class="grid-btns">
+                <button id="btn-search" class="btn primary">
